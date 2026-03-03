@@ -4,8 +4,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        ivory: '#FAF6F1',
+        ivory: {
+          DEFAULT: '#a48e74',
+          light: '#dec19e',
+          dark: '#6c5e4d'
+        },
         cream: '#F0EAE2',
+        black: '#000000',
         terra: {
           DEFAULT: '#C45D35',
           light: '#D97B56',
