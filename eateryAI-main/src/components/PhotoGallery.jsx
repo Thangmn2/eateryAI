@@ -9,7 +9,7 @@ function loadPhotos() {
   } catch {
     return []
   }
-}
+} 
 
 function deletePhoto(id) {
   try {
