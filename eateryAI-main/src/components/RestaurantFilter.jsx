@@ -1,11 +1,10 @@
 import { useRef } from 'react'
 
-export default function RestaurantFilter({ restaurants, selected, onSelect, summary }) {
+export default function RestaurantFilter({ restaurants, selected, onSelect, counts }) {
   const scrollRef = useRef(null)
 
   function getItemCount(name) {
-    const s = summary?.find(s => s.Restaurant === name)
-    return s ? s['Total Items'] : null
+    return counts?.[name] || null
   }
 
   return (

@@ -1,49 +1,30 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-
-const STORAGE_KEY = 'eateryai_scanned_photos'
-
-function loadPhotos() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
-  } catch {
-    return []
-  }
-} 
-
-function deletePhoto(id) {
-  try {
-    const existing = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
-    const updated = existing.filter(p => p.id !== id)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
-    return updated
-  } catch {
-    return []
-  }
-}
+import { deleteScannedScan, loadScannedPhotos } from '../utils/scannedMenus'
 
 function formatDate(isoString) {
   const date = new Date(isoString)
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
-export default function PhotoGallery({ onClose }) {
+export default function PhotoGallery({ onClose, onPhotosChanged }) {
   const [photos, setPhotos] = useState([])
   const [selected, setSelected] = useState(null)
 
   useEffect(() => {
-    setPhotos(loadPhotos())
+    setPhotos(loadScannedPhotos())
   }, [])
 
   function handleDelete(id) {
-    const updated = deletePhoto(id)
-    setPhotos(updated)
+    const updated = deleteScannedScan(id)
+    setPhotos(updated.photos)
+    onPhotosChanged?.()
     if (selected?.id === id) setSelected(null)
   }
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[1000] flex items-center justify-center p-4"
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
     >
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
@@ -96,7 +77,7 @@ export default function PhotoGallery({ onClose }) {
                     <div className="p-2 bg-white">
                       <p className="text-xs text-gray-500 truncate">{formatDate(photo.scannedAt)}</p>
                       {photo.extractedText
-                        ? <span className="text-xs text-green-600 font-medium">✓ AI scanned</span>
+                        ? <span className="text-xs text-green-600 font-medium">{photo.parsedItemCount || 0} items imported</span>
                         : <span className="text-xs text-gray-400">Photo only</span>
                       }
                     </div>
@@ -132,12 +113,12 @@ export default function PhotoGallery({ onClose }) {
                         <svg className="w-3.5 h-3.5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
                         </svg>
-                        AI Extracted Items
+                        OCR Extracted Text
                       </p>
                       <pre className="text-xs text-gray-600 whitespace-pre-wrap font-sans leading-relaxed">{selected.extractedText}</pre>
                     </div>
                   ) : (
-                    <p className="text-xs text-gray-400 italic">No AI scan for this photo. Re-scan it using the Scan Menu button.</p>
+                    <p className="text-xs text-gray-400 italic">No extracted text is stored for this scan. Scan the menu again to import items.</p>
                   )}
                 </div>
                 <button

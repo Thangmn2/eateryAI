@@ -56,7 +56,7 @@ function GoalEditor({ goals, onSave, onClose }) {
   ]
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 backdrop-blur-sm"
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/30 backdrop-blur-sm"
          onClick={onClose}>
       <div className="bg-white rounded-2xl p-6 shadow-modal w-80" onClick={e => e.stopPropagation()}>
         <p className="font-display text-lg font-semibold mb-1">Edit Goals</p>

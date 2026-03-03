@@ -9,7 +9,7 @@ export default function CartPanel({ cart, totals, goals, onClose, onRemove, onUp
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.15 }}
-      className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-[1000] bg-black/40 backdrop-blur-sm"
       onClick={onClose}
     >
       <motion.div

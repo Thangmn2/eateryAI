@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import menuJson from './data/menuData.json'
 import GoalTracker from './components/GoalTracker'
@@ -9,10 +9,10 @@ import CartPanel from './components/CartPanel'
 import CameraScanner from './components/CameraScanner'
 import PhotoGallery from './components/PhotoGallery'
 import RestaurantMap from './components/RestaurantMap'
+import { loadScannedMenuItems, loadScannedPhotos } from './utils/scannedMenus'
 
 const confirmedItems = menuJson.menuItems.filter(i => !i['Nutrition Estimated'])
 const unconfirmedItems = menuJson.menuItems.filter(i => i['Nutrition Estimated'])
-const RESTAURANTS = [...new Set(menuJson.menuItems.map(i => i.Restaurant))].sort()
 
 export default function App() {
   const [selectedRestaurant, setSelectedRestaurant] = useState('All')
@@ -22,9 +22,19 @@ export default function App() {
   const [goals, setGoals] = useState({ price: 30, calories: 2000, protein: 150 })
   const [showCamera, setShowCamera] = useState(false)
   const [showGallery, setShowGallery] = useState(false)
-  const [galleryScanCount, setGalleryScanCount] = useState(
-    () => JSON.parse(localStorage.getItem('eateryai_scanned_photos') || '[]').length
-  )
+  const [galleryScanCount, setGalleryScanCount] = useState(() => loadScannedPhotos().length)
+  const [scannedMenuItems, setScannedMenuItems] = useState(() => loadScannedMenuItems())
+
+  const restaurants = useMemo(() => {
+    return [...new Set([...menuJson.menuItems.map(item => item.Restaurant), ...scannedMenuItems.map(item => item.Restaurant)])].sort()
+  }, [scannedMenuItems])
+
+  const restaurantCounts = useMemo(() => {
+    return [...confirmedItems, ...unconfirmedItems, ...scannedMenuItems].reduce((counts, item) => {
+      counts[item.Restaurant] = (counts[item.Restaurant] || 0) + 1
+      return counts
+    }, {})
+  }, [scannedMenuItems])
 
   const filteredConfirmed = useMemo(() => {
     return selectedRestaurant === 'All'
@@ -32,11 +42,19 @@ export default function App() {
       : confirmedItems.filter(i => i.Restaurant === selectedRestaurant)
   }, [selectedRestaurant])
 
-  const filteredUnconfirmed = useMemo(() => {
+  const filteredScannedItems = useMemo(() => {
     return selectedRestaurant === 'All'
+      ? scannedMenuItems
+      : scannedMenuItems.filter(item => item.Restaurant === selectedRestaurant)
+  }, [scannedMenuItems, selectedRestaurant])
+
+  const filteredUnconfirmed = useMemo(() => {
+    const baseUnconfirmed = selectedRestaurant === 'All'
       ? unconfirmedItems
       : unconfirmedItems.filter(i => i.Restaurant === selectedRestaurant)
-  }, [selectedRestaurant])
+
+    return [...filteredScannedItems, ...baseUnconfirmed]
+  }, [filteredScannedItems, selectedRestaurant])
 
   function groupItems(items) {
     if (selectedRestaurant === 'All') {
@@ -62,6 +80,8 @@ export default function App() {
 
   const groupedConfirmed = useMemo(() => groupItems(filteredConfirmed), [filteredConfirmed, selectedRestaurant])
   const groupedUnconfirmed = useMemo(() => groupItems(filteredUnconfirmed), [filteredUnconfirmed, selectedRestaurant])
+  const hasScannedUnconfirmed = filteredScannedItems.length > 0
+  const totalItemCount = menuJson.menuItems.length + scannedMenuItems.length
 
   const cartTotals = useMemo(() => {
     return cart.reduce(
@@ -102,9 +122,16 @@ export default function App() {
     })
   }
 
-  function handlePhotoSaved() {
-    setGalleryScanCount(JSON.parse(localStorage.getItem('eateryai_scanned_photos') || '[]').length)
+  function refreshScannedContent() {
+    setGalleryScanCount(loadScannedPhotos().length)
+    setScannedMenuItems(loadScannedMenuItems())
   }
+
+  useEffect(() => {
+    if (selectedRestaurant !== 'All' && !restaurants.includes(selectedRestaurant)) {
+      setSelectedRestaurant('All')
+    }
+  }, [restaurants, selectedRestaurant])
 
   return (
     <div className="grain min-h-screen">
@@ -124,7 +151,7 @@ export default function App() {
               Eatery
             </h1>
             <p className="mt-1 text-warmgray text-sm">
-              {menuJson.menuItems.length} items across {RESTAURANTS.length} restaurants
+              {totalItemCount} items across {restaurants.length} restaurants
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -158,10 +185,10 @@ export default function App() {
         </div>
 
         <RestaurantFilter
-          restaurants={RESTAURANTS}
+          restaurants={restaurants}
           selected={selectedRestaurant}
           onSelect={setSelectedRestaurant}
-          summary={menuJson.summary}
+          counts={restaurantCounts}
         />
 
         <RestaurantMap />
@@ -182,7 +209,9 @@ export default function App() {
               </span>
             </div>
             <p className="text-sm text-warmgray-light mb-5 -mt-3">
-              Nutritional info for these items was estimated based on typical serving sizes and may not be accurate.
+              {hasScannedUnconfirmed
+                ? 'Recently scanned menu items appear here first. OCR can misread names, prices, and nutrition values, and older items in this section may still use estimated nutrition.'
+                : 'Nutritional info for these items was estimated based on typical serving sizes and may not be accurate.'}
             </p>
             <div className="opacity-80">
               <MenuGrid groupedItems={groupedUnconfirmed} onItemClick={setSelectedItem} cart={cart} />
@@ -193,13 +222,17 @@ export default function App() {
 
       <AnimatePresence>
         {showCamera && (
-          <CameraScanner onClose={() => setShowCamera(false)} onPhotoSaved={handlePhotoSaved} />
+          <CameraScanner
+            knownRestaurants={restaurants}
+            onClose={() => setShowCamera(false)}
+            onPhotoSaved={refreshScannedContent}
+          />
         )}
       </AnimatePresence>
 
       <AnimatePresence>
         {showGallery && (
-          <PhotoGallery onClose={() => setShowGallery(false)} />
+          <PhotoGallery onClose={() => setShowGallery(false)} onPhotosChanged={refreshScannedContent} />
         )}
       </AnimatePresence>
 
