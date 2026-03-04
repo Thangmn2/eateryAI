@@ -66,11 +66,11 @@ function ItemCard({ item, onClick, inCart }) {
         </h3>
         <div className="flex items-center justify-between">
           {hasPrice ? (
-            <span className="text-sm font-bold text-terra">${price.toFixed(2)}</span>
+            <span className="text-sm font-bold text-black">${price.toFixed(2)}</span>
           ) : (
             <span className="text-xs text-warmgray-light italic">Price N/A</span>
           )}
-          <div className="flex items-center gap-2 text-[11px] text-warmgray">
+          <div className="flex items-center gap-2 text-[11px] text-black">
             {item['Nutrition Estimated'] && (
               <span className="text-amber-500" title="Estimated">~</span>
             )}
@@ -96,7 +96,7 @@ function ItemCard({ item, onClick, inCart }) {
 function CategorySection({ title, items, onItemClick, cart }) {
   return (
     <div className="mb-8">
-      <h3 className="text-sm font-semibold uppercase tracking-wider text-warmgray mb-3 flex items-center gap-2">
+      <h3 className="text-sm font-semibold uppercase tracking-wider text-white mb-3 flex items-center gap-2">
         <span className="w-6 h-px bg-cream" />
         {title}
         <span className="text-warmgray-light font-normal normal-case tracking-normal">({items.length})</span>
@@ -128,8 +128,8 @@ export default function MenuGrid({ groupedItems, onItemClick, cart }) {
         {restaurants.map(([restaurant, categories]) => (
           <div key={restaurant} className="mb-10">
             <div className="flex items-center gap-3 mb-4 pb-2 border-b border-cream">
-              <h2 className="font-display text-xl sm:text-2xl font-bold text-gray-900">{restaurant}</h2>
-              <span className="text-xs text-warmgray-light bg-cream px-2 py-0.5 rounded-full">
+              <h2 className="font-display text-xl sm:text-2xl font-bold text-white">{restaurant}</h2>
+              <span className="text-xs text-black bg-white px-2 py-0.5 rounded-full">
                 {Object.values(categories).flat().length} items
               </span>
             </div>

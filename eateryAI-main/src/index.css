@@ -8,7 +8,8 @@
   }
 
   body {
-    background-color: #FAF6F1;
+    background-color: #000000;
+    color: #ffffff; /* makes default text white */
     overflow-x: hidden;
   }
 
@@ -36,16 +37,16 @@
 
   .chip {
     @apply px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 cursor-pointer
-           border border-cream bg-ivory text-warmgray hover:border-white/30 hover:text-black;
+          border border-white bg-black text-white hover:bg-white hover:text-black;
   }
 
   .chip-active {
-    @apply bg-cream text-black border-white shadow-sm;
+    @apply bg-white text-black border-white;
   }
 
   .menu-card {
-    @apply bg-white rounded-2xl overflow-hidden shadow-card
-           transition-all duration-300 cursor-pointer;
+    @apply rounded-2xl overflow-hidden
+          transition-all duration-300 cursor-pointer bg-white;
   }
   .menu-card:hover {
     @apply shadow-card-hover;

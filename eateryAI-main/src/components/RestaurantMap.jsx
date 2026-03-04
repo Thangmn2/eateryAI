@@ -55,7 +55,7 @@ export default function RestaurantMap() {
   return (
     <section className="mt-8">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="font-display text-2xl font-bold text-gray-900">Restaurant Map</h2>
+        <h2 className="font-display text-2xl font-bold text-white">Restaurant Map</h2>
         <p className="text-xs text-warmgray">Use mouse wheel or +/- controls to zoom</p>
       </div>
       <div className="rounded-2xl overflow-hidden border border-cream shadow-card bg-white">

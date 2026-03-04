@@ -30,7 +30,7 @@ export default function CartPanel({ cart, totals, goals, onClose, onRemove, onUp
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-ivory flex items-center justify-center hover:bg-cream transition-colors"
+            className="w-8 h-8 rounded-full bg-cream flex items-center justify-center hover:bg-cream transition-colors"
           >
             <svg className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -54,7 +54,7 @@ export default function CartPanel({ cart, totals, goals, onClose, onRemove, onUp
                 const entryImgUrl = entry.item['Image URL'] || ''
                 const hasImage = entryImgUrl.startsWith('http') && !entryImgUrl.includes('Logo.png')
                 return (
-                  <div key={idx} className="flex gap-3 bg-ivory/50 rounded-xl p-3">
+                  <div key={idx} className="flex gap-3 bg-ivory-light rounded-xl p-3">
                     {/* Thumbnail */}
                     <div className="w-14 h-14 rounded-lg overflow-hidden bg-cream shrink-0">
                       {hasImage ? (
@@ -105,7 +105,7 @@ export default function CartPanel({ cart, totals, goals, onClose, onRemove, onUp
                           </button>
                         </div>
                         {hasPrice && (
-                          <span className="text-sm font-bold text-terra">
+                          <span className="text-sm font-bold text-black">
                             ${(price * entry.qty).toFixed(2)}
                           </span>
                         )}

@@ -134,7 +134,7 @@ export default function App() {
   }, [restaurants, selectedRestaurant])
 
   return (
-    <div className="grain min-h-screen">
+    <div className="grain min-h-screen bg-black">
       <GoalTracker
         goals={goals}
         totals={cartTotals}
@@ -143,14 +143,14 @@ export default function App() {
         onCartClick={() => setShowCart(true)}
       />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 bg-black">
         {/* Header */}
         <div className="pt-6 pb-4 flex items-end justify-between">
           <div>
-            <h1 className="font-display text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight">
+            <h1 className="font-display text-3xl sm:text-4xl font-bold text-white tracking-tight">
               Eatery
             </h1>
-            <p className="mt-1 text-warmgray text-sm">
+            <p className="mt-1 text-white">
               {totalItemCount} items across {restaurants.length} restaurants
             </p>
           </div>
@@ -158,14 +158,14 @@ export default function App() {
             {/* Saved Scans button */}
             <button
               onClick={() => setShowGallery(true)}
-              className="relative flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-sm font-medium shadow-sm transition-all"
+              className="relative flex items-center gap-2 px-4 py-2.5 rounded-xl border boreder-white/20 bg-white hover:bg-gray-50 text-gray-700 text-sm font-medium shadow-sm transition-all"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
               </svg>
               Saved Scans
               {galleryScanCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-orange-400 text-white text-xs rounded-full flex items-center justify-center font-bold">
                   {galleryScanCount}
                 </span>
               )}
@@ -173,7 +173,7 @@ export default function App() {
             {/* Scan Menu button */}
             <button
               onClick={() => setShowCamera(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 active:scale-95 text-white text-sm font-semibold shadow-md transition-all"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-400 hover:bg-orange-600 active:scale-95 text-white text-sm font-semibold shadow-md transition-all"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
@@ -197,18 +197,18 @@ export default function App() {
 
         {filteredUnconfirmed.length > 0 && (
           <div className="mt-6">
-            <div className="flex items-center gap-3 mb-6 pt-6 border-t-2 border-dashed border-cream">
+            <div className="flex items-center gap-3 mb-6 pt-6 border-t-2 border-dashed border-white/30">
               <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-warmgray-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
                 </svg>
-                <h2 className="font-display text-xl sm:text-2xl font-bold text-warmgray">Unconfirmed Data</h2>
+                <h2 className="font-display text-xl sm:text-2xl font-bold text-white">Unconfirmed Data</h2>
               </div>
-              <span className="text-xs text-warmgray-light bg-cream px-2.5 py-1 rounded-full">
+              <span className="text-xs text-white/70 bg black  px-2.5 py-1 rounded-full">
                 {filteredUnconfirmed.length} items
               </span>
             </div>
-            <p className="text-sm text-warmgray-light mb-5 -mt-3">
+            <p className="text-sm text-white mb-5 -mt-3">
               {hasScannedUnconfirmed
                 ? 'Recently scanned menu items appear here first. OCR can misread names, prices, and nutrition values, and older items in this section may still use estimated nutrition.'
                 : 'Nutritional info for these items was estimated based on typical serving sizes and may not be accurate.'}

@@ -12,7 +12,7 @@ export default {
         cream: '#F0EAE2',
         black: '#000000',
         terra: {
-          DEFAULT: '#C45D35',
+          DEFAULT: '#000000',
           light: '#D97B56',
           dark: '#A84B29',
           50: '#FEF3EE',

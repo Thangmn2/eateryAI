@@ -58,22 +58,22 @@ function GoalEditor({ goals, onSave, onClose }) {
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/30 backdrop-blur-sm"
          onClick={onClose}>
-      <div className="bg-white rounded-2xl p-6 shadow-modal w-80" onClick={e => e.stopPropagation()}>
-        <p className="font-display text-lg font-semibold mb-1">Edit Goals</p>
-        <p className="text-warmgray text-sm mb-5">Set your daily targets</p>
+      <div className="bg-black rounded-2xl p-6 shadow-modal w-80" onClick={e => e.stopPropagation()}>
+        <p className="font-display text-lg text-white font-semibold mb-1">Edit Goals</p>
+        <p className="text-white text-sm mb-5">Set your daily targets</p>
         <div className="space-y-3">
           {fields.map(f => (
             <div key={f.label}>
-              <label className="text-xs font-medium text-warmgray uppercase tracking-wider mb-1 block">{f.label}</label>
+              <label className="text-xs font-medium text-cream uppercase tracking-wider mb-1 block">{f.label}</label>
               <div className="relative">
                 {f.prefix && (
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-warmgray-light font-medium">{f.prefix}</span>
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-black font-medium">{f.prefix}</span>
                 )}
                 <input
                   type="number"
                   value={f.value}
                   onChange={e => f.onChange(e.target.value)}
-                  className={`w-full px-4 py-2.5 rounded-xl border bg-ivory text-base font-medium
+                  className={`w-full px-4 py-2.5 rounded-xl border bg-white text-base font-medium
                              focus:outline-none focus:ring-2 ${f.color} ${f.prefix ? 'pl-7' : ''}`}
                   onKeyDown={e => { if (e.key === 'Enter') handleSave() }}
                 />
@@ -132,9 +132,9 @@ export default function GoalTracker({ goals, totals, onGoalsChange, cartCount, o
 
   return (
     <>
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-cream/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 gap-4">
+      <div className="sticky top-0 z-40 bg-black backdrop-blur-xl border-b border-black">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 bg-black">
+          <div className="flex items-center justify-between h-16 gap-4 bg-black">
             {/* Goal Metrics */}
             <div className="flex items-center gap-5 sm:gap-8 overflow-x-auto no-scrollbar">
               {metrics.map(m => {
@@ -149,12 +149,12 @@ export default function GoalTracker({ goals, totals, onGoalsChange, cartCount, o
                   >
                     <ProgressRing value={m.current} max={m.max} color={m.color} />
                     <div className="text-left">
-                      <div className="text-[11px] uppercase tracking-wider text-warmgray font-medium leading-none mb-0.5">
+                      <div className="text-[11px] uppercase tracking-wider text-white font-medium leading-none mb-0.5">
                         {m.label}
                       </div>
-                      <div className={`text-sm font-semibold leading-none ${isOver ? 'text-red-500' : 'text-gray-900'}`}>
+                      <div className={`text-sm font-semibold leading-none ${isOver ? 'text-red-500' : 'text-white'}`}>
                         {m.format(m.current)}
-                        <span className="text-warmgray-light font-normal"> / {m.formatMax(m.max)}</span>
+                        <span className="text-white font-normal"> / {m.formatMax(m.max)}</span>
                       </div>
                     </div>
                   </button>
@@ -166,7 +166,7 @@ export default function GoalTracker({ goals, totals, onGoalsChange, cartCount, o
             <button
               onClick={onCartClick}
               className="relative shrink-0 w-10 h-10 flex items-center justify-center rounded-full
-                         bg-ivory hover:bg-cream transition-colors group"
+                         bg-cream hover:bg-cream transition-colors group"
             >
               <svg className="w-5 h-5 text-gray-700 group-hover:text-terra transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
