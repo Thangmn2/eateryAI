@@ -438,5 +438,85 @@
     "latitude": 33.7899202754446,
     "longitude": -117.941704346627,
     "logo_url": "https://menufyproduction.imgix.net/638754954347689874+1680255.png?auto=compress,format&h=1080&w=1920&fit=max"
+  },
+  {
+    "restaurant_name": "Big Chopsticks",
+    "restaurant_url": "https://costamesa.bigchopsticks.com/",
+    "address_search": "1089 Baker St, Costa Mesa, CA 92626",
+    "latitude": 33.6797226,
+    "longitude": -117.9029073,
+    "logo_url": "https://menufyproduction.imgix.net:443/637287116440053232+229446.png?auto=compress,format&fit=max&w=1024&h=1024"
+  },
+  {
+    "restaurant_name": "Blk Dot Coffee",
+    "restaurant_url": "https://www.blkdotcoffee.com/home",
+    "address_search": "13786 Jamboree Rd Ste B, Irvine CA 92602",
+    "latitude": 33.72313049932136,
+    "longitude": -117.79050158212692,
+    "logo_url": "https://5997d3d1c1c167a14e97.cdn6.editmysite.com/uploads/b/5997d3d1c1c167a14e97171eb506956aaa2aacffa22ab360bcdfdb22c8416297/blk-logo_1686625585.png?width=2400&optimize=medium"
+  },
+  {
+    "restaurant_name": "Curry Express",
+    "restaurant_url": "https://www.grubhub.com/restaurant/curry-express-3850-barranca-pkwy-ste-o-irvine/2334312",
+    "address_search": "3850 Barranca Pkwy Ste O, Irvine CA 92602",
+    "latitude": 33.68382807078369,
+    "longitude": -117.81130678792489,
+    "logo_url": "https://media-cdn.grubhub.com/image/upload/d_searc…sy,dpr_2.0,c_fit,f_auto,h_70/fj11cmoruruacv3fpkp5"
+  },
+  {
+    "restaurant_name": "Ever After Tearoom & Eatery",
+    "restaurant_url": "https://order.toasttab.com/online/everafter",
+    "address_search": "18090 Culver Dr, Irvine CA 92612",
+    "latitude": 33.66396993920015,
+    "longitude": -117.82587627116361,
+    "logo_url": "https://d28f3w0x9i80nq.cloudfront.net/restaurantImages/d60bb990-5860-49b2-aabf-114f22c8e10e/onlineorderlogo.jpg"
+  },
+  {
+    "restaurant_name": "J Sushi Orange",
+    "restaurant_url": "https://fromtherestaurant.com/j-sushi--grill/menu/352-S-Main-St/",
+    "address_search": "352 S Main St, Orange CA 92868",
+    "latitude": 33.7832118864418,
+    "longitude": -117.86760781349089,
+    "logo_url": "https://d2gqo3h0psesgi.cloudfront.net/auto/j-sushi--grill-logo.png"
+  },
+    {
+    "restaurant_name": "Jam Jam Tea Lab",
+    "restaurant_url": "https://order.toasttab.com/online/jamjam",
+    "address_search": "92 Corporate Park Ste D, Irvine CA 92606",
+    "latitude": 33.69275564990029,
+    "longitude":  -117.82712728465451,
+    "logo_url": "https://d28f3w0x9i80nq.cloudfront.net/restaurantImages/36b9daf7-608e-4823-ac1f-bc07f3404895/restaurant_1703229891.png"
+  },
+    {
+    "restaurant_name": "Mama Lu's Dumpling House",
+    "restaurant_url": "https://mamaludumpling.com/#menu-section",
+    "address_search": "17662 17th St, Tustin CA 92780",
+    "latitude": 33.75904017288361,
+    "longitude": -117.82361622873809,
+    "logo_url": "https://images.squarespace-cdn.com/content/v1/566cac710ab377dc3abcb56d/1451437309215-EHOX5SKP5ENIDN5Z86AV/Mama+Lu+Logo+white+with+red+small.png?format=1500w"
+  },
+    {
+    "restaurant_name": "Nguyen's Kitchen",
+    "restaurant_url": "https://www.nguyenskitchen.com/menu/",
+    "address_search": "445 S Main St B, Orange CA 92868",
+    "latitude": 33.78913449924808,
+    "longitude": -117.86613460894442,
+    "logo_url": "https://www.nguyenskitchen.com/wp-content/uploads/2022/09/NK-Logo-Icon-Black.png"
+  },
+    {
+    "restaurant_name": "Taqueria Chicolandia",
+    "restaurant_url": "https://www.zmenu.com/chico-landia-santa-ana-online-menu/",
+    "address_search": "2341 W 1st St, Santa Ana CA 92703",
+    "latitude": 33.745916983272444,
+    "longitude": -117.90084783676348,
+    "logo_url": ""
+  },
+    {
+    "restaurant_name": "The Taco Stand",
+    "restaurant_url": "https://order.toasttab.com/online/taco-stand-orange-2981-bristol-st-suite-b-2",
+    "address_search": "2981 Bristol St Ste B2, Costa Mesa CA 92626",
+    "latitude": 33.68197587754958,
+    "longitude": -117.88674146171282,
+    "logo_url": "https://d2s742iet3d3t1.cloudfront.net/restaurants/restaurant-111658000000000000/restaurant_1704832211.jpg?size=small"
   }
 ]
