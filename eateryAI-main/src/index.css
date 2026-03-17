@@ -86,11 +86,15 @@ html {
 }
 
 .theme-light .chip {
-  @apply border-black/10 bg-white text-gray-900 hover:bg-white hover:border-black/20;
+  @apply border-black/10 bg-white text-gray-900 hover:bg-warmgray hover:border-black/20;
 }
 
 .theme-light .chip-active {
   @apply border-black bg-black text-white;
+}
+
+.theme-light .chip-active:hover {
+  @apply border-white bg-warmgray-light text-black;
 }
 
 .theme-dark .chip {
@@ -99,4 +103,8 @@ html {
 
 .theme-dark .chip-active {
   @apply border-white bg-white text-black;
+}
+
+.theme-dark .chip-active:hover {
+  @apply border-white bg-white/20 text-white;
 }
