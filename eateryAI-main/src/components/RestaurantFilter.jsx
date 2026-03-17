@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import slugify from '../utils/slugify'
 
 export default function RestaurantFilter({ restaurants, selected, onSelect, counts, theme }) {
   const scrollRef = useRef(null)
@@ -18,14 +19,18 @@ export default function RestaurantFilter({ restaurants, selected, onSelect, coun
         className="flex gap-2 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4"
       >
         <button
-          onClick={() => onSelect('All')}
+          onClick={() => {
+            onSelect('All')
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
           className={`chip whitespace-nowrap ${selected === 'All' ? 'chip-active' : ''}`}
         >
           All Restaurants
         </button>
         {restaurants.map(name => (
-          <button
+          <a
             key={name}
+            href={`#restaurant-${slugify(name)}`}
             onClick={() => onSelect(name)}
             className={`chip whitespace-nowrap ${selected === name ? 'chip-active' : ''}`}
           >
@@ -43,7 +48,7 @@ export default function RestaurantFilter({ restaurants, selected, onSelect, coun
                 {getItemCount(name)}
               </span>
             )}
-          </button>
+          </a>
         ))}
       </div>
       {/* Fade edges */}

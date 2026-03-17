@@ -527,7 +527,7 @@ function ChipotleBuilderModal({ mealType, data, onClose, onAdd, theme }) {
                     <span className="text-sm font-semibold">{formatPrice(price)}</span>
                   </div>
                   {item.includedPremium && (
-                    <p className="mt-1 text-xs text-terra">Includes guac</p>
+                    <p className="mt-1 text-xs text-white">Includes guac</p>
                   )}
                 </button>
               )
@@ -785,7 +785,7 @@ function ChipotleBuilderModal({ mealType, data, onClose, onAdd, theme }) {
               {displayItemName}
             </h2>
             {isComplete && (
-              <span className="shrink-0 text-lg font-bold text-terra">{formatPrice(totals.price)}</span>
+              <span className="shrink-0 text-lg font-bold text-white">{formatPrice(totals.price)}</span>
             )}
           </div>
 

@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import restaurantData from '../data/restaurantData.json'
+import slugify from '../utils/slugify'
 
 const DEFAULT_CENTER = [33.7419795, -117.8231586]
 const DEFAULT_ZOOM = 13
@@ -28,13 +29,16 @@ export default function RestaurantMap({ theme, sidebar = false }) {
     const markers = restaurantData
       .filter(r => Number.isFinite(r.latitude) && Number.isFinite(r.longitude))
       .map(r => {
+        const sectionId = `restaurant-${slugify(r.restaurant_name)}`
         const marker = window.L.marker([r.latitude, r.longitude]).addTo(map)
-        marker.bindPopup(
-          `<div style="min-width: 160px;">
+
+        marker.bindPopup(`
+          <div style="min-width: 160px;">
             <strong>${r.restaurant_name}</strong><br/>
-            <a href="${r.restaurant_url}" target="_blank" rel="noopener noreferrer">Visit Restaurant</a>
-          </div>`
-        )
+            <a href="#${sectionId}">Visit Restaurant</a>
+          </div>
+        `)
+
         return marker
       })
 

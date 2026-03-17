@@ -1,3 +1,5 @@
+import slugify from '../utils/slugify'
+
 function ItemCard({ item, onClick, inCart, theme }) {
   const isLight = theme === 'light'
   const price = parseFloat(item['Price ($)'])
@@ -35,7 +37,6 @@ function ItemCard({ item, onClick, inCart, theme }) {
           : 'border-white/10 bg-[#111317]'
       }`}
     >
-      {/* Image */}
       <div className="aspect-[4/3] overflow-hidden relative">
         {hasImage ? (
           <img
@@ -59,7 +60,7 @@ function ItemCard({ item, onClick, inCart, theme }) {
             {item['Item Name']}
           </p>
         </div>
-        {/* Source badge */}
+
         <span className={`absolute top-2 left-2 rounded-full px-2 py-0.5 text-[10px] font-medium shadow-sm backdrop-blur-sm ${
           isLight
             ? 'bg-white/90 text-warmgray'
@@ -67,7 +68,7 @@ function ItemCard({ item, onClick, inCart, theme }) {
         }`}>
           {item.Source}
         </span>
-        {/* In cart indicator */}
+
         {inCart && (
           <span className="absolute top-2 right-2 w-6 h-6 rounded-full bg-terra text-white text-xs font-bold flex items-center justify-center shadow-sm">
             {inCart}
@@ -75,7 +76,6 @@ function ItemCard({ item, onClick, inCart, theme }) {
         )}
       </div>
 
-      {/* Info */}
       <div className="p-3.5">
         <h3 className={`mb-1.5 line-clamp-2 text-sm font-semibold leading-snug ${isLight ? 'text-gray-900' : 'text-white'}`}>
           {item['Item Name']}
@@ -145,18 +145,27 @@ export default function MenuGrid({
   theme,
   afterRestaurantName,
   afterRestaurantContent,
+  selectedRestaurant,
 }) {
   const isLight = theme === 'light'
 
   if (groupedItems.type === 'byRestaurant') {
     const restaurants = Object.entries(groupedItems.data)
+
     return (
       <div>
         {restaurants.map(([restaurant, categories]) => (
-          <div key={restaurant} className="mb-10">
+          <div
+            key={restaurant}
+            id={`restaurant-${slugify(restaurant)}`}
+            className="mb-10 scroll-mt-24"
+          >
             <div className={`flex items-center gap-3 mb-4 pb-2 border-b ${isLight ? 'border-black/10' : 'border-cream'}`}>
-              <h2 className={`font-display text-xl sm:text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>{restaurant}</h2>
+              <h2 className={`font-display text-xl sm:text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                {restaurant}
+              </h2>
             </div>
+
             {Object.entries(categories).map(([category, items]) => (
               <CategorySection
                 key={category}
@@ -175,10 +184,9 @@ export default function MenuGrid({
     )
   }
 
-  // Single restaurant view - group by category
   const categories = Object.entries(groupedItems.data)
   return (
-    <div>
+    <div id={selectedRestaurant ? `restaurant-${slugify(selectedRestaurant)}` : undefined} className="scroll-mt-24">
       {categories.map(([category, items]) => (
         <CategorySection
           key={category}

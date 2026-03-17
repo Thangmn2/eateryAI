@@ -12,6 +12,7 @@ import CameraScanner from './components/CameraScanner'
 import PhotoGallery from './components/PhotoGallery'
 import RestaurantMap from './components/RestaurantMap'
 import { loadScannedMenuItems, loadScannedPhotos } from './utils/scannedMenus'
+import slugify from './utils/slugify'
 
 const confirmedItems = menuJson.menuItems.filter(i => !i['Nutrition Estimated'])
 const unconfirmedItems = menuJson.menuItems.filter(i => i['Nutrition Estimated'])
@@ -192,6 +193,38 @@ export default function App() {
     document.documentElement.style.colorScheme = isLight ? 'light' : 'dark'
   }, [isLight, theme])
 
+  useEffect(() => {
+    function syncRestaurantFromHash() {
+      const hash = window.location.hash
+      if (!hash.startsWith('#restaurant-')) return
+
+      const slug = hash.replace('#restaurant-', '')
+      const matchedRestaurant = restaurants.find(
+        name => slugify(name) === slug
+      )
+
+      if (matchedRestaurant) {
+        setSelectedRestaurant(matchedRestaurant)
+
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            const el = document.getElementById(`restaurant-${slug}`)
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }
+          })
+        })
+      }
+    }
+
+    syncRestaurantFromHash()
+    window.addEventListener('hashchange', syncRestaurantFromHash)
+
+    return () => {
+      window.removeEventListener('hashchange', syncRestaurantFromHash)
+    }
+  }, [restaurants])
+
   return (
     <div className={`grain min-h-screen ${isLight ? 'theme-light bg-[#f6f1e8]' : 'theme-dark bg-black'}`}>
       <GoalTracker
@@ -227,6 +260,7 @@ export default function App() {
               onItemClick={setSelectedItem}
               cart={cart}
               theme={theme}
+              selectedRestaurant={selectedRestaurant}
               afterRestaurantName={selectedRestaurant === 'All' ? 'J Sushi Orange' : undefined}
               afterRestaurantContent={selectedRestaurant === 'All' ? (
                 <ChipotleBuilder
@@ -245,7 +279,7 @@ export default function App() {
                     <svg className={`w-5 h-5 ${isLight ? 'text-gray-900' : 'text-white'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
                     </svg>
-                    <h2 className={`font-display text-xl sm:text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>Unconfirmed Data</h2>
+                    <h3 className={`font-display text-xl sm:text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>Unconfirmed Data</h3>
                   </div>
                   <span className={`text-xs px-2.5 py-1 rounded-full ${isLight ? 'text-warmgray-dark bg-black/5' : 'text-white/70 bg-black/20'}`}>
                     {filteredUnconfirmed.length} items
@@ -256,8 +290,13 @@ export default function App() {
                     ? 'Recently scanned menu items appear here first. OCR can misread names, prices, and nutrition values, and older items in this section may still use estimated nutrition.'
                     : 'Nutritional info for these items was estimated based on typical serving sizes and may not be accurate.'}
                 </p>
+                <div className={`flex items-center gap-3 mb-4 pb-2 border-b ${isLight ? 'border-black/10' : 'border-cream'}`}>
+                  <h2 className={`font-display text-xl sm:text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                    {selectedRestaurant}
+                  </h2>
+                </div>
                 <div className="opacity-80">
-                  <MenuGrid groupedItems={groupedUnconfirmed} onItemClick={setSelectedItem} cart={cart} theme={theme} />
+                  <MenuGrid groupedItems={groupedUnconfirmed} onItemClick={setSelectedItem} cart={cart} theme={theme} selectedRestaurant={selectedRestaurant}/>
                 </div>
               </div>
             )}
