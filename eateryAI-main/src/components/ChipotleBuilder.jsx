@@ -286,7 +286,7 @@ function ChipotleBuilderModal({ mealType, data, onClose, onAdd, theme }) {
       totalNutrition = addNutrition(totalNutrition, chips.nutrition)
     }
 
-    let totalPrice = mealType.prices?.[selectedProtein.id] || 0
+    let totalPrice = mealType.basePrices?.[selectedProtein.id] || 0
 
     for (const premium of selectedPremiums) {
       if (premium.id === selectedProtein.includedPremium) {
@@ -510,7 +510,7 @@ function ChipotleBuilderModal({ mealType, data, onClose, onAdd, theme }) {
         return (
           <div className="grid gap-2 sm:grid-cols-2">
             {proteins.map(item => {
-              const price = mealType.prices?.[item.id] || 0
+              const price = mealType.basePrices?.[item.id] || 0
 
               return (
                 <button
@@ -524,7 +524,7 @@ function ChipotleBuilderModal({ mealType, data, onClose, onAdd, theme }) {
                 >
                   <div className="flex items-center justify-between gap-3">
                     <span className="font-semibold">{item.name}</span>
-                    <span className="text-sm font-semibold">{formatPrice(price)}</span>
+                    <span className="text-sm font-semibold">{formatPrice(price)} total</span>
                   </div>
                   {item.includedPremium && (
                     <p className="mt-1 text-xs text-white">Includes guac</p>
@@ -690,7 +690,7 @@ function ChipotleBuilderModal({ mealType, data, onClose, onAdd, theme }) {
                     isLight
                   )}`}
                 >
-                  Double Protein
+                  Double Protein{selectedProtein?.extraPrice ? ` · +$${selectedProtein.extraPrice.toFixed(2)}` : ''}
                 </button>
               ) : null}
               {doubleWrap && mealType?.allows?.doubleWrap ? (
@@ -702,7 +702,7 @@ function ChipotleBuilderModal({ mealType, data, onClose, onAdd, theme }) {
                     isLight
                   )}`}
                 >
-                  Double Wrap
+                  Double Wrap · +{formatPrice(doubleWrap.price)}
                 </button>
               ) : null}
               {chips && (
@@ -714,7 +714,7 @@ function ChipotleBuilderModal({ mealType, data, onClose, onAdd, theme }) {
                     isLight
                   )}`}
                 >
-                  Chips
+                  Chips · +{formatPrice(chips.price)}
                 </button>
               )}
             </div>

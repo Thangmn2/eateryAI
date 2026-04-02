@@ -26,7 +26,7 @@
         "shellChoice": false,
         "doubleWrap": true
       },
-      "prices": {
+      "basePrices": {
         "chicken": 9.8,
         "steak": 11.55,
         "carnitas": 10.55,
@@ -116,6 +116,7 @@
       "id": "chicken",
       "name": "Chicken",
       "itemName": "Chicken",
+      "pricingRole": "base",  
       "nutrition": {
         "calories": 180,
         "fat": 7,
