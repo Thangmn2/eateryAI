@@ -12,6 +12,7 @@ export default function RestaurantMap({ theme, sidebar = false }) {
   const mapRef = useRef(null)
   const markersLayerRef = useRef(null)
   const userMarkerRef = useRef(null)
+  const userLocationRef = useRef(null)
   const iconCacheRef = useRef(new Map())
   const [visibleCount, setVisibleCount] = useState(0)
   const [totalInView, setTotalInView] = useState(0)
@@ -50,21 +51,15 @@ export default function RestaurantMap({ theme, sidebar = false }) {
     }
 
     function buildPopup(r) {
-      const sectionId = `restaurant-${slugify(r.restaurant_name)}`
       const phone = r.phone ? `<div><strong>Phone:</strong> ${r.phone}</div>` : ''
       const hours = r.hours ? `<div><strong>Hours:</strong> ${r.hours}</div>` : ''
       const address = r.address ? `<div><strong>Address:</strong> ${r.address}</div>` : ''
-      const url = r.restaurant_url
-        ? `<div><a href="${r.restaurant_url}" target="_blank" rel="noopener noreferrer">Order Online</a></div>`
-        : ''
       return `
         <div style="min-width: 200px;">
           <div style="font-weight: 700; margin-bottom: 4px;">${r.restaurant_name}</div>
           ${phone}
           ${hours}
           ${address}
-          ${url}
-          <div style="margin-top: 6px;"><a href="#${sectionId}">Jump to Menu</a></div>
         </div>
       `
     }
@@ -98,6 +93,10 @@ export default function RestaurantMap({ theme, sidebar = false }) {
         marker.bindPopup(buildPopup(r))
         marker.on('mouseover', () => marker.openPopup())
         marker.on('mouseout', () => marker.closePopup())
+        marker.on('click', () => {
+          const slug = slugify(r.restaurant_name)
+          window.location.hash = `#restaurant-${slug}`
+        })
         marker.addTo(markersLayerRef.current)
       })
 
@@ -107,6 +106,7 @@ export default function RestaurantMap({ theme, sidebar = false }) {
     map.on('moveend zoomend', updateMarkers)
 
     function setUserLocation(lat, lng) {
+      userLocationRef.current = [lat, lng]
       if (userMarkerRef.current) {
         userMarkerRef.current.setLatLng([lat, lng])
         return
@@ -149,6 +149,35 @@ export default function RestaurantMap({ theme, sidebar = false }) {
     }
   }, [])
 
+  function handleRecenter() {
+    const map = mapRef.current
+    if (!map) return
+    if (userLocationRef.current) {
+      map.setView(userLocationRef.current, Math.max(map.getZoom(), 14))
+      if (userMarkerRef.current) {
+        userMarkerRef.current.openPopup()
+      }
+      return
+    }
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          const { latitude, longitude } = pos.coords
+          map.setView([latitude, longitude], 14)
+          if (userMarkerRef.current) {
+            userMarkerRef.current.setLatLng([latitude, longitude])
+          }
+          userLocationRef.current = [latitude, longitude]
+        },
+        () => {
+          map.setView(DEFAULT_CENTER, DEFAULT_ZOOM)
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      )
+    }
+  }
+
   return (
     <section className={`relative z-0 ${sidebar ? '' : 'mt-8'}`}>
       {!sidebar && (
@@ -176,6 +205,17 @@ export default function RestaurantMap({ theme, sidebar = false }) {
               : 'h-[420px]'
           }`}
         />
+        <button
+          type="button"
+          onClick={handleRecenter}
+          className={`absolute right-4 top-4 z-10 rounded-full px-3 py-2 text-xs font-semibold shadow-sm transition ${
+            isLight
+              ? 'bg-white/90 text-gray-800 hover:bg-white'
+              : 'bg-[#1f232b]/90 text-white hover:bg-[#1f232b]'
+          }`}
+        >
+          Back to my location
+        </button>
       </div>
     </section>
   )
