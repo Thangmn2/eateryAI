@@ -85,6 +85,14 @@ html {
   z-index: 9999;
 }
 
+.restaurant-logo-marker {
+  border-radius: 999px;
+  border: 2px solid #ffffff;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.18);
+  background: #ffffff;
+  object-fit: cover;
+}
+
 .theme-light .chip {
   @apply border-black/10 bg-white text-gray-900 hover:bg-warmgray hover:border-black/20;
 }

@@ -1,14 +1,20 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import restaurantData from '../data/restaurantData.json'
 import slugify from '../utils/slugify'
 
 const DEFAULT_CENTER = [33.7419795, -117.8231586]
 const DEFAULT_ZOOM = 13
+const MAX_MARKERS = 300
 
 export default function RestaurantMap({ theme, sidebar = false }) {
   const isLight = theme === 'light'
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
+  const markersLayerRef = useRef(null)
+  const userMarkerRef = useRef(null)
+  const iconCacheRef = useRef(new Map())
+  const [visibleCount, setVisibleCount] = useState(0)
+  const [totalInView, setTotalInView] = useState(0)
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return
@@ -26,32 +32,118 @@ export default function RestaurantMap({ theme, sidebar = false }) {
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map)
 
-    const markers = restaurantData
-      .filter(r => Number.isFinite(r.latitude) && Number.isFinite(r.longitude))
-      .map(r => {
-        const sectionId = `restaurant-${slugify(r.restaurant_name)}`
-        const marker = window.L.marker([r.latitude, r.longitude]).addTo(map)
+    const markersLayer = window.L.layerGroup().addTo(map)
+    markersLayerRef.current = markersLayer
 
-        marker.bindPopup(`
-          <div style="min-width: 160px;">
-            <strong>${r.restaurant_name}</strong><br/>
-            <a href="#${sectionId}">Visit Restaurant</a>
-          </div>
-        `)
+    function getIcon(logoUrl) {
+      if (!logoUrl) return null
+      if (iconCacheRef.current.has(logoUrl)) return iconCacheRef.current.get(logoUrl)
+      const icon = window.L.icon({
+        iconUrl: logoUrl,
+        iconSize: [34, 34],
+        iconAnchor: [17, 34],
+        popupAnchor: [0, -28],
+        className: 'restaurant-logo-marker',
+      })
+      iconCacheRef.current.set(logoUrl, icon)
+      return icon
+    }
 
-        return marker
+    function buildPopup(r) {
+      const sectionId = `restaurant-${slugify(r.restaurant_name)}`
+      const phone = r.phone ? `<div><strong>Phone:</strong> ${r.phone}</div>` : ''
+      const hours = r.hours ? `<div><strong>Hours:</strong> ${r.hours}</div>` : ''
+      const address = r.address ? `<div><strong>Address:</strong> ${r.address}</div>` : ''
+      const url = r.restaurant_url
+        ? `<div><a href="${r.restaurant_url}" target="_blank" rel="noopener noreferrer">Order Online</a></div>`
+        : ''
+      return `
+        <div style="min-width: 200px;">
+          <div style="font-weight: 700; margin-bottom: 4px;">${r.restaurant_name}</div>
+          ${phone}
+          ${hours}
+          ${address}
+          ${url}
+          <div style="margin-top: 6px;"><a href="#${sectionId}">Jump to Menu</a></div>
+        </div>
+      `
+    }
+
+    function distanceSq(a, b) {
+      const dx = a[0] - b[0]
+      const dy = a[1] - b[1]
+      return dx * dx + dy * dy
+    }
+
+    function updateMarkers() {
+      if (!markersLayerRef.current) return
+      markersLayerRef.current.clearLayers()
+      const bounds = map.getBounds()
+      const center = map.getCenter()
+      const candidates = restaurantData.filter(r => {
+        if (!Number.isFinite(r.latitude) || !Number.isFinite(r.longitude)) return false
+        return bounds.contains([r.latitude, r.longitude])
       })
 
-    if (markers.length > 1) {
-      const group = window.L.featureGroup(markers)
-      map.fitBounds(group.getBounds().pad(0.2))
-    } else if (markers.length === 1) {
-      map.setView(markers[0].getLatLng(), 15)
+      setTotalInView(candidates.length)
+
+      const centered = candidates
+        .map(r => ({ r, d: distanceSq([r.latitude, r.longitude], [center.lat, center.lng]) }))
+        .sort((a, b) => a.d - b.d)
+        .slice(0, MAX_MARKERS)
+
+      centered.forEach(({ r }) => {
+        const icon = getIcon(r.logo_url)
+        const marker = window.L.marker([r.latitude, r.longitude], icon ? { icon } : undefined)
+        marker.bindPopup(buildPopup(r))
+        marker.on('mouseover', () => marker.openPopup())
+        marker.on('mouseout', () => marker.closePopup())
+        marker.addTo(markersLayerRef.current)
+      })
+
+      setVisibleCount(centered.length)
+    }
+
+    map.on('moveend zoomend', updateMarkers)
+
+    function setUserLocation(lat, lng) {
+      if (userMarkerRef.current) {
+        userMarkerRef.current.setLatLng([lat, lng])
+        return
+      }
+      userMarkerRef.current = window.L.circleMarker([lat, lng], {
+        radius: 8,
+        fillColor: '#2563eb',
+        color: '#1e3a8a',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 0.9,
+      })
+        .addTo(map)
+        .bindPopup('You are here')
+    }
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          const { latitude, longitude } = pos.coords
+          map.setView([latitude, longitude], 14)
+          setUserLocation(latitude, longitude)
+          updateMarkers()
+        },
+        () => {
+          updateMarkers()
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      )
+    } else {
+      updateMarkers()
     }
 
     mapRef.current = map
 
     return () => {
+      map.off('moveend zoomend', updateMarkers)
       map.remove()
       mapRef.current = null
     }
@@ -59,6 +151,12 @@ export default function RestaurantMap({ theme, sidebar = false }) {
 
   return (
     <section className={`relative z-0 ${sidebar ? '' : 'mt-8'}`}>
+      {!sidebar && (
+        <div className="mb-3 flex items-center justify-between text-xs text-warmgray">
+          <div>Showing {visibleCount} restaurants near this area</div>
+          <div>In view: {totalInView}</div>
+        </div>
+      )}
       <div
         className={`relative isolate z-0 overflow-hidden shadow-card ${
           sidebar
