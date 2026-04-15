@@ -93,6 +93,41 @@ html {
   object-fit: cover;
 }
 
+.user-location-marker {
+  background: transparent;
+  border: 0;
+}
+
+.user-location-marker .user-location-pulse,
+.user-location-marker .user-location-dot {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+}
+
+.user-location-marker .user-location-pulse {
+  background: rgba(37, 99, 235, 0.2);
+  animation: userPulse 1.8s ease-out infinite;
+}
+
+.user-location-marker .user-location-dot {
+  inset: 6px;
+  background: #2563eb;
+  border: 3px solid #ffffff;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.45);
+}
+
+@keyframes userPulse {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
 .theme-light .chip {
   @apply border-black/10 bg-white text-gray-900 hover:bg-warmgray hover:border-black/20;
 }

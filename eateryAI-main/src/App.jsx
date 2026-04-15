@@ -11,6 +11,8 @@ import CartPanel from './components/CartPanel'
 import CameraScanner from './components/CameraScanner'
 import PhotoGallery from './components/PhotoGallery'
 import RestaurantMap from './components/RestaurantMap'
+import MenufyMenuSection from './components/MenufyMenuSection'
+import LazyRender from './components/LazyRender'
 import { loadScannedMenuItems, loadScannedPhotos } from './utils/scannedMenus'
 import slugify from './utils/slugify'
 
@@ -30,7 +32,9 @@ function loadInitialTheme() {
 }
 
 export default function App() {
+  const [view, setView] = useState('map')
   const [selectedRestaurant, setSelectedRestaurant] = useState('All')
+  const [focusedMenufyRestaurant, setFocusedMenufyRestaurant] = useState('')
   const [selectedItem, setSelectedItem] = useState(null)
   const [cart, setCart] = useState([])
   const [showCart, setShowCart] = useState(false)
@@ -147,6 +151,15 @@ export default function App() {
     setScannedMenuItems(loadScannedMenuItems())
   }
 
+  function handleRestaurantSelect(name) {
+    setFocusedMenufyRestaurant(name)
+    setSelectedRestaurant(restaurants.includes(name) ? name : 'All')
+    setView('menu')
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    })
+  }
+
   useEffect(() => {
     if (selectedRestaurant !== 'All' && !restaurants.includes(selectedRestaurant)) {
       setSelectedRestaurant('All')
@@ -196,6 +209,14 @@ export default function App() {
   useEffect(() => {
     function syncRestaurantFromHash() {
       const hash = window.location.hash
+      if (hash.startsWith('#menufy-restaurant-')) {
+        const id = hash.replace('#', '')
+        const el = document.getElementById(id)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+        return
+      }
       if (!hash.startsWith('#restaurant-')) return
 
       const slug = hash.replace('#restaurant-', '')
@@ -205,6 +226,8 @@ export default function App() {
 
       if (matchedRestaurant) {
         setSelectedRestaurant(matchedRestaurant)
+        setFocusedMenufyRestaurant('')
+        setView('menu')
 
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
@@ -226,87 +249,135 @@ export default function App() {
   }, [restaurants])
 
   return (
-    <div className={`grain min-h-screen ${isLight ? 'theme-light bg-[#f6f1e8]' : 'theme-dark bg-black'}`}>
-      <GoalTracker
-        goals={goals}
-        totals={cartTotals}
-        onGoalsChange={setGoals}
-        cartCount={cart.reduce((s, e) => s + e.qty, 0)}
-        onCartClick={() => setShowCart(true)}
-        onOpenCamera={() => setShowCamera(true)}
-        onOpenGallery={() => setShowGallery(true)}
-        galleryScanCount={galleryScanCount}
-        theme={theme}
-        onThemeToggle={() => setTheme(current => current === 'light' ? 'dark' : 'light')}
-      />
+    <div
+      className={`grain ${
+        view === 'map' ? 'h-[100dvh] overflow-hidden' : 'min-h-screen'
+      } ${isLight ? 'theme-light bg-[#f6f1e8]' : 'theme-dark bg-black'}`}
+    >
+      {view === 'map' ? (
+        <main className={`h-[100dvh] overflow-hidden ${isLight ? 'bg-[#f6f1e8]' : 'bg-black'}`}>
+          <RestaurantMap theme={theme} onRestaurantClick={handleRestaurantSelect} />
+        </main>
+      ) : (
+        <>
+          <GoalTracker
+            goals={goals}
+            totals={cartTotals}
+            onGoalsChange={setGoals}
+            cartCount={cart.reduce((s, e) => s + e.qty, 0)}
+            onCartClick={() => setShowCart(true)}
+            onOpenCamera={() => setShowCamera(true)}
+            onOpenGallery={() => setShowGallery(true)}
+            galleryScanCount={galleryScanCount}
+            theme={theme}
+            onThemeToggle={() => setTheme(current => current === 'light' ? 'dark' : 'light')}
+          />
 
-      <main className={`max-w-7xl mx-auto px-4 pt-4 sm:px-6 sm:pt-5 lg:pl-8 lg:pr-0 lg:pt-6 pb-24 ${isLight ? 'bg-[#f6f1e8]' : 'bg-black'}`}>
-        <RestaurantFilter
-          restaurants={restaurants}
-          selected={selectedRestaurant}
-          onSelect={setSelectedRestaurant}
-          counts={restaurantCounts}
-          theme={theme}
-        />
-
-        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(300px,0.42fr)] lg:items-start lg:gap-8">
-          <div className="min-w-0">
-            <p className={`mb-6 -mt-2 text-sm ${isLight ? 'text-warmgray-dark' : 'text-white/80'}`}>
-              {totalItemCount} items across {restaurants.length} restaurants
-            </p>
-
-            <MenuGrid
-              groupedItems={groupedConfirmed}
-              onItemClick={setSelectedItem}
-              cart={cart}
-              theme={theme}
-              selectedRestaurant={selectedRestaurant}
-              afterRestaurantName={selectedRestaurant === 'All' ? 'J Sushi Orange' : undefined}
-              afterRestaurantContent={selectedRestaurant === 'All' ? (
-                <ChipotleBuilder
-                  data={chipotleBuilderData}
-                  onAdd={addToCart}
-                  isLoading={chipotleBuilderLoading}
-                  theme={theme}
-                />
-              ) : null}
-            />
-
-            {filteredUnconfirmed.length > 0 && (
-              <div className="mt-6">
-                <div className={`flex items-center gap-3 mb-6 pt-6 border-t-2 border-dashed ${isLight ? 'border-black/10' : 'border-white/30'}`}>
-                  <div className="flex items-center gap-2">
-                    <svg className={`w-5 h-5 ${isLight ? 'text-gray-900' : 'text-white'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-                    </svg>
-                    <h3 className={`font-display text-xl sm:text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>Unconfirmed Data</h3>
-                  </div>
-                  <span className={`text-xs px-2.5 py-1 rounded-full ${isLight ? 'text-warmgray-dark bg-black/5' : 'text-white/70 bg-black/20'}`}>
-                    {filteredUnconfirmed.length} items
-                  </span>
-                </div>
-                <p className={`text-sm mb-5 -mt-3 ${isLight ? 'text-warmgray-dark' : 'text-white'}`}>
-                  {hasScannedUnconfirmed
-                    ? 'Recently scanned menu items appear here first. OCR can misread names, prices, and nutrition values, and older items in this section may still use estimated nutrition.'
-                    : 'Nutritional info for these items was estimated based on typical serving sizes and may not be accurate.'}
-                </p>
-                <div className={`flex items-center gap-3 mb-4 pb-2 border-b ${isLight ? 'border-black/10' : 'border-cream'}`}>
-                  <h2 className={`font-display text-xl sm:text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
-                    {selectedRestaurant}
-                  </h2>
-                </div>
-                <div className="opacity-80">
-                  <MenuGrid groupedItems={groupedUnconfirmed} onItemClick={setSelectedItem} cart={cart} theme={theme} selectedRestaurant={selectedRestaurant}/>
-                </div>
+          <main className={`max-w-7xl mx-auto px-4 pt-4 sm:px-6 sm:pt-5 lg:px-8 lg:pt-6 pb-24 ${isLight ? 'bg-[#f6f1e8]' : 'bg-black'}`}>
+            <div className={`sticky top-[72px] z-30 -mx-4 mb-6 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 ${
+              isLight ? 'bg-[#f6f1e8]/92 border-b border-black/10' : 'bg-black border-b border-white/10'
+            }`}>
+              <div className="mb-3">
+                <button
+                  type="button"
+                  onClick={() => setView('map')}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    isLight
+                      ? 'bg-black text-white hover:bg-black/85'
+                      : 'bg-white text-black hover:bg-white/85'
+                  }`}
+                >
+                  Back to map
+                </button>
               </div>
-            )}
-          </div>
 
-          <aside className="mt-8 lg:sticky lg:top-24 lg:mt-0">
-            <RestaurantMap theme={theme} sidebar />
-          </aside>
-        </div>
-      </main>
+              <RestaurantFilter
+                restaurants={restaurants}
+                selected={selectedRestaurant}
+                onSelect={value => {
+                  setSelectedRestaurant(value)
+                  setFocusedMenufyRestaurant('')
+                }}
+                counts={restaurantCounts}
+                theme={theme}
+              />
+            </div>
+
+            <div className="min-w-0">
+              <p className={`mb-6 -mt-2 text-sm ${isLight ? 'text-warmgray-dark' : 'text-white/80'}`}>
+                {totalItemCount} items across {restaurants.length} restaurants
+              </p>
+
+              <MenuGrid
+                groupedItems={groupedConfirmed}
+                onItemClick={setSelectedItem}
+                cart={cart}
+                theme={theme}
+                selectedRestaurant={selectedRestaurant}
+                afterRestaurantName={selectedRestaurant === 'All' ? 'J Sushi Orange' : undefined}
+                afterRestaurantContent={selectedRestaurant === 'All' ? (
+                  <ChipotleBuilder
+                    data={chipotleBuilderData}
+                    onAdd={addToCart}
+                    isLoading={chipotleBuilderLoading}
+                    theme={theme}
+                  />
+                ) : null}
+              />
+
+              {focusedMenufyRestaurant ? (
+                <MenufyMenuSection theme={theme} focusRestaurant={focusedMenufyRestaurant} />
+              ) : (
+                <LazyRender
+                  rootMargin="300px"
+                  minHeight="320px"
+                  placeholder={(
+                    <section className="mt-12">
+                      <div className="flex items-center justify-between mb-4">
+                        <h2 className={`font-display text-2xl sm:text-3xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                          Menufy Menu
+                        </h2>
+                        <span className={`text-xs ${isLight ? 'text-warmgray' : 'text-white/60'}`}>Load on scroll</span>
+                      </div>
+                    </section>
+                  )}
+                >
+                  <MenufyMenuSection theme={theme} focusRestaurant={focusedMenufyRestaurant} />
+                </LazyRender>
+              )}
+
+              {filteredUnconfirmed.length > 0 && (
+                <div className="mt-6">
+                  <div className={`flex items-center gap-3 mb-6 pt-6 border-t-2 border-dashed ${isLight ? 'border-black/10' : 'border-white/30'}`}>
+                    <div className="flex items-center gap-2">
+                      <svg className={`w-5 h-5 ${isLight ? 'text-gray-900' : 'text-white'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                      </svg>
+                      <h3 className={`font-display text-xl sm:text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>Unconfirmed Data</h3>
+                    </div>
+                    <span className={`text-xs px-2.5 py-1 rounded-full ${isLight ? 'text-warmgray-dark bg-black/5' : 'text-white/70 bg-black/20'}`}>
+                      {filteredUnconfirmed.length} items
+                    </span>
+                  </div>
+                  <p className={`text-sm mb-5 -mt-3 ${isLight ? 'text-warmgray-dark' : 'text-white'}`}>
+                    {hasScannedUnconfirmed
+                      ? 'Recently scanned menu items appear here first. OCR can misread names, prices, and nutrition values, and older items in this section may still use estimated nutrition.'
+                      : 'Nutritional info for these items was estimated based on typical serving sizes and may not be accurate.'}
+                  </p>
+                  <div className={`flex items-center gap-3 mb-4 pb-2 border-b ${isLight ? 'border-black/10' : 'border-cream'}`}>
+                    <h2 className={`font-display text-xl sm:text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                      {selectedRestaurant}
+                    </h2>
+                  </div>
+                  <div className="opacity-80">
+                    <MenuGrid groupedItems={groupedUnconfirmed} onItemClick={setSelectedItem} cart={cart} theme={theme} selectedRestaurant={selectedRestaurant} />
+                  </div>
+                </div>
+              )}
+            </div>
+          </main>
+        </>
+      )}
 
       <AnimatePresence>
         {showCamera && (

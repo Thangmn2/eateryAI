@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { MongoClient } from 'mongodb'
 import { loadChipotleBuilderData } from './chipotle.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -42,6 +43,65 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, {
         ok: true,
         configured: Boolean(process.env.AZURE_VISION_ENDPOINT && process.env.AZURE_VISION_KEY),
+        mongoConfigured: Boolean(process.env.MONGODB_URI && process.env.MONGODB_DB),
+      })
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/restaurants') {
+      const db = await getMongoDb()
+      const docs = await db.collection('rest_info').find({}, {
+        projection: {
+          restaurant: 1,
+          address: 1,
+          city: 1,
+          state: 1,
+          logo_img: 1,
+          phone_number: 1,
+          restaurant_hours: 1,
+          latitude_coordinates: 1,
+          longitude_coordinates: 1,
+          restaurant_url: 1,
+          website: 1,
+        },
+      }).toArray()
+
+      const payload = docs.map(doc => ({
+        restaurant_name: doc.restaurant || '',
+        restaurant_url: doc.restaurant_url || doc.website || '',
+        address: doc.address || '',
+        city: doc.city || '',
+        state: doc.state || '',
+        latitude: Number(doc.latitude_coordinates),
+        longitude: Number(doc.longitude_coordinates),
+        logo_url: doc.logo_img || '',
+        phone: doc.phone_number || '',
+        hours: doc.restaurant_hours || '',
+      }))
+
+      return sendJson(res, 200, payload)
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/menufy/menu-items') {
+      const db = await getMongoDb()
+      const restaurant = url.searchParams.get('restaurant')?.trim()
+      const limitParam = url.searchParams.get('limit')
+      const skipParam = url.searchParams.get('skip')
+      const limit = limitParam ? Number.parseInt(limitParam, 10) : 200
+      const skip = skipParam ? Number.parseInt(skipParam, 10) : 0
+      const safeLimit = Number.isFinite(limit) && limit > 0 ? Math.min(limit, 500) : 200
+      const safeSkip = Number.isFinite(skip) && skip > 0 ? skip : 0
+
+      const cursor = db.collection('menu_items')
+        .find(restaurant ? { restaurant } : {})
+        .skip(safeSkip)
+        .limit(safeLimit)
+
+      const docs = await cursor.toArray()
+      return sendJson(res, 200, {
+        items: docs,
+        limit: safeLimit,
+        skip: safeSkip,
+        returned: docs.length,
       })
     }
 
@@ -149,6 +209,33 @@ function getAzureConfig() {
     endpoint: endpoint.replace(/\/+$/u, ''),
     key,
   }
+}
+
+let mongoClient
+let mongoDb
+
+async function getMongoDb() {
+  const uri = process.env.MONGODB_URI?.trim()
+  const dbName = process.env.MONGODB_DB?.trim()
+
+  if (!uri || !dbName) {
+    const error = new Error(
+      'MongoDB is not configured. Set MONGODB_URI and MONGODB_DB in .env.local.'
+    )
+    error.statusCode = 500
+    throw error
+  }
+
+  if (mongoDb) {
+    return mongoDb
+  }
+
+  mongoClient = new MongoClient(uri, {
+    maxPoolSize: 10,
+  })
+  await mongoClient.connect()
+  mongoDb = mongoClient.db(dbName)
+  return mongoDb
 }
 
 function decodeDataUrl(imageDataUrl) {

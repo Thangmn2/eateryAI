@@ -1,21 +1,25 @@
 import { useEffect, useRef, useState } from 'react'
-import restaurantData from '../data/restaurantData.json'
 import slugify from '../utils/slugify'
 
 const DEFAULT_CENTER = [33.7419795, -117.8231586]
 const DEFAULT_ZOOM = 13
 const MAX_MARKERS = 300
 
-export default function RestaurantMap({ theme, sidebar = false }) {
+export default function RestaurantMap({ theme, sidebar = false, onRestaurantClick }) {
   const isLight = theme === 'light'
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
   const markersLayerRef = useRef(null)
   const userMarkerRef = useRef(null)
   const userLocationRef = useRef(null)
+  const restaurantsRef = useRef([])
+  const didAutoZoomRef = useRef(false)
   const iconCacheRef = useRef(new Map())
   const [visibleCount, setVisibleCount] = useState(0)
   const [totalInView, setTotalInView] = useState(0)
+  const [status, setStatus] = useState('loading')
+  const [noNearby, setNoNearby] = useState(false)
+  const [locationStatus, setLocationStatus] = useState('locating')
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return
@@ -75,12 +79,26 @@ export default function RestaurantMap({ theme, sidebar = false }) {
       markersLayerRef.current.clearLayers()
       const bounds = map.getBounds()
       const center = map.getCenter()
-      const candidates = restaurantData.filter(r => {
+      const candidates = restaurantsRef.current.filter(r => {
         if (!Number.isFinite(r.latitude) || !Number.isFinite(r.longitude)) return false
         return bounds.contains([r.latitude, r.longitude])
       })
 
       setTotalInView(candidates.length)
+
+      if (candidates.length === 0 && restaurantsRef.current.length > 0 && !didAutoZoomRef.current) {
+        const nearest = restaurantsRef.current
+          .filter(r => Number.isFinite(r.latitude) && Number.isFinite(r.longitude))
+          .map(r => ({ r, d: distanceSq([r.latitude, r.longitude], [center.lat, center.lng]) }))
+          .sort((a, b) => a.d - b.d)[0]
+
+        if (nearest?.r) {
+          didAutoZoomRef.current = true
+          setNoNearby(true)
+          map.setView([nearest.r.latitude, nearest.r.longitude], 12)
+          return
+        }
+      }
 
       const centered = candidates
         .map(r => ({ r, d: distanceSq([r.latitude, r.longitude], [center.lat, center.lng]) }))
@@ -94,33 +112,71 @@ export default function RestaurantMap({ theme, sidebar = false }) {
         marker.on('mouseover', () => marker.openPopup())
         marker.on('mouseout', () => marker.closePopup())
         marker.on('click', () => {
-          const slug = slugify(r.restaurant_name)
-          window.location.hash = `#restaurant-${slug}`
+          if (onRestaurantClick) {
+            onRestaurantClick(r.restaurant_name)
+          } else {
+            const slug = slugify(r.restaurant_name)
+            const mainId = `restaurant-${slug}`
+            const menufyId = `menufy-restaurant-${slug}`
+            if (document.getElementById(menufyId)) {
+              window.location.hash = `#${menufyId}`
+            } else if (document.getElementById(mainId)) {
+              window.location.hash = `#${mainId}`
+            } else {
+              window.location.hash = `#${menufyId}`
+            }
+          }
         })
         marker.addTo(markersLayerRef.current)
       })
 
       setVisibleCount(centered.length)
+      if (centered.length > 0) {
+        setNoNearby(false)
+      }
     }
 
     map.on('moveend zoomend', updateMarkers)
 
     function setUserLocation(lat, lng) {
       userLocationRef.current = [lat, lng]
+      setLocationStatus('ready')
+
+      const userIcon = window.L.divIcon({
+        className: 'user-location-marker',
+        html: '<span class="user-location-pulse"></span><span class="user-location-dot"></span>',
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+        popupAnchor: [0, -14],
+      })
+
       if (userMarkerRef.current) {
         userMarkerRef.current.setLatLng([lat, lng])
+        userMarkerRef.current.setIcon(userIcon)
         return
       }
-      userMarkerRef.current = window.L.circleMarker([lat, lng], {
-        radius: 8,
-        fillColor: '#2563eb',
-        color: '#1e3a8a',
-        weight: 2,
-        opacity: 1,
-        fillOpacity: 0.9,
+
+      userMarkerRef.current = window.L.marker([lat, lng], {
+        icon: userIcon,
+        zIndexOffset: 2000,
       })
         .addTo(map)
         .bindPopup('You are here')
+    }
+
+    async function loadRestaurants() {
+      try {
+        const response = await fetch('/api/restaurants')
+        if (!response.ok) {
+          throw new Error('Failed to load restaurants.')
+        }
+        const data = await response.json()
+        restaurantsRef.current = Array.isArray(data) ? data : []
+        setStatus('ready')
+        updateMarkers()
+      } catch {
+        setStatus('error')
+      }
     }
 
     if (navigator.geolocation) {
@@ -129,15 +185,17 @@ export default function RestaurantMap({ theme, sidebar = false }) {
           const { latitude, longitude } = pos.coords
           map.setView([latitude, longitude], 14)
           setUserLocation(latitude, longitude)
-          updateMarkers()
+          void loadRestaurants()
         },
         () => {
-          updateMarkers()
+          setLocationStatus('unavailable')
+          void loadRestaurants()
         },
         { enableHighAccuracy: true, timeout: 8000 }
       )
     } else {
-      updateMarkers()
+      setLocationStatus('unsupported')
+      void loadRestaurants()
     }
 
     mapRef.current = map
@@ -147,7 +205,7 @@ export default function RestaurantMap({ theme, sidebar = false }) {
       map.remove()
       mapRef.current = null
     }
-  }, [])
+  }, [onRestaurantClick])
 
   function handleRecenter() {
     const map = mapRef.current
@@ -165,12 +223,11 @@ export default function RestaurantMap({ theme, sidebar = false }) {
         pos => {
           const { latitude, longitude } = pos.coords
           map.setView([latitude, longitude], 14)
-          if (userMarkerRef.current) {
-            userMarkerRef.current.setLatLng([latitude, longitude])
-          }
-          userLocationRef.current = [latitude, longitude]
+          setUserLocation(latitude, longitude)
+          if (userMarkerRef.current) userMarkerRef.current.openPopup()
         },
         () => {
+          setLocationStatus('unavailable')
           map.setView(DEFAULT_CENTER, DEFAULT_ZOOM)
         },
         { enableHighAccuracy: true, timeout: 8000 }
@@ -179,15 +236,41 @@ export default function RestaurantMap({ theme, sidebar = false }) {
   }
 
   return (
-    <section className={`relative z-0 ${sidebar ? '' : 'mt-8'}`}>
+    <section className={`relative z-0 ${sidebar ? '' : 'h-full'}`}>
       {!sidebar && (
-        <div className="mb-3 flex items-center justify-between text-xs text-warmgray">
-          <div>Showing {visibleCount} restaurants near this area</div>
-          <div>In view: {totalInView}</div>
+        <div className={`absolute left-4 bottom-4 z-[2000] flex items-center gap-3 rounded-full px-4 py-2 text-xs font-medium shadow-sm backdrop-blur ${
+          isLight ? 'bg-white/85' : 'bg-black/45'
+        }`}>
+          <div className={isLight ? 'text-gray-800' : 'text-white'}>
+            Showing {visibleCount} restaurants near this area
+          </div>
+          <div className={isLight ? 'text-gray-600' : 'text-white/75'}>
+            In view: {totalInView}
+          </div>
+        </div>
+      )}
+      {status === 'error' && (
+        <div className={`absolute left-4 top-4 z-[2000] text-xs ${isLight ? 'text-red-600' : 'text-red-400'}`}>
+          Could not load restaurants from the server.
+        </div>
+      )}
+      {locationStatus === 'unavailable' && (
+        <div className={`absolute left-4 top-4 z-[2000] text-xs ${isLight ? 'text-amber-700' : 'text-amber-300'}`}>
+          Location access is off, so your pin could not be shown.
+        </div>
+      )}
+      {locationStatus === 'unsupported' && (
+        <div className={`absolute left-4 top-4 z-[2000] text-xs ${isLight ? 'text-amber-700' : 'text-amber-300'}`}>
+          This browser does not support location detection.
+        </div>
+      )}
+      {noNearby && (
+        <div className={`absolute left-4 ${locationStatus === 'ready' || locationStatus === 'locating' ? 'top-4' : 'top-10'} z-[2000] text-xs ${isLight ? 'text-warmgray-dark' : 'text-white/70'}`}>
+          No restaurants found near your location. Zoomed to the nearest available area.
         </div>
       )}
       <div
-        className={`relative isolate z-0 overflow-hidden shadow-card ${
+        className={`relative isolate z-0 overflow-hidden ${sidebar ? 'shadow-card' : 'h-full'} ${
           sidebar
             ? isLight
               ? 'rounded-2xl border border-black/10 bg-white lg:rounded-r-none lg:border-r-0'
@@ -202,7 +285,7 @@ export default function RestaurantMap({ theme, sidebar = false }) {
           className={`relative z-0 w-full transition-[height] duration-300 ease-out ${
             sidebar
               ? 'h-[420px] lg:h-[calc(100vh-8.5rem)]'
-              : 'h-[420px]'
+              : 'h-full'
           }`}
         />
         <button
