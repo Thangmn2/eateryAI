@@ -49,8 +49,9 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'GET' && url.pathname === '/api/restaurants') {
       const db = await getMongoDb()
-      const docs = await db.collection('rest_info').find({}, {
+      const docs = await db.collection('menu_items').find({}, {
         projection: {
+          _id: 1,
           restaurant: 1,
           address: 1,
           city: 1,
@@ -61,22 +62,33 @@ const server = http.createServer(async (req, res) => {
           latitude_coordinates: 1,
           longitude_coordinates: 1,
           restaurant_url: 1,
-          website: 1,
+          location: 1,
         },
       }).toArray()
 
-      const payload = docs.map(doc => ({
-        restaurant_name: doc.restaurant || '',
-        restaurant_url: doc.restaurant_url || doc.website || '',
-        address: doc.address || '',
-        city: doc.city || '',
-        state: doc.state || '',
-        latitude: Number(doc.latitude_coordinates),
-        longitude: Number(doc.longitude_coordinates),
-        logo_url: doc.logo_img || '',
-        phone: doc.phone_number || '',
-        hours: doc.restaurant_hours || '',
-      }))
+      const payload = docs
+        .map(doc => {
+          const nestedCoords = Array.isArray(doc?._id?.coords) ? doc._id.coords : null
+          const geoJsonCoords = Array.isArray(doc?.location?.coordinates) ? doc.location.coordinates : null
+          const fallbackCoords = nestedCoords || geoJsonCoords
+          const longitude = fallbackCoords?.[0] ?? doc.longitude_coordinates
+          const latitude = fallbackCoords?.[1] ?? doc.latitude_coordinates
+
+          return {
+            restaurant_name: doc.restaurant || doc?._id?.restaurant_name || '',
+            restaurant_url: doc.restaurant_url || '',
+            address: doc.address || doc?._id?.address || '',
+            city: doc.city || '',
+            state: doc.state || '',
+            latitude: Number(latitude),
+            longitude: Number(longitude),
+            logo_url: doc.logo_img || '',
+            phone: doc.phone_number || '',
+            hours: doc.restaurant_hours || '',
+          }
+        })
+        .filter(doc => doc.restaurant_name && Number.isFinite(doc.latitude) && Number.isFinite(doc.longitude))
+        .sort((a, b) => a.restaurant_name.localeCompare(b.restaurant_name))
 
       return sendJson(res, 200, payload)
     }
