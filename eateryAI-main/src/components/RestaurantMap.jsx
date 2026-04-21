@@ -130,6 +130,15 @@ function createMarkerGlyph(name) {
     .slice(0, 3)
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;')
+}
+
 function isValidRestaurantCoordinate(restaurant) {
   return Number.isFinite(restaurant.latitude) && Number.isFinite(restaurant.longitude)
 }
@@ -455,17 +464,28 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
       const markersLayer = window.L.layerGroup().addTo(map)
       markersLayerRef.current = markersLayer
 
-      function getIcon(logoUrl) {
-        if (!logoUrl) return null
-        if (iconCacheRef.current.has(logoUrl)) return iconCacheRef.current.get(logoUrl)
-        const icon = window.L.icon({
-          iconUrl: logoUrl,
+      function getIcon(logoUrl, restaurantName) {
+        const cacheKey = logoUrl || `__fallback__:${restaurantName || ''}`
+        if (iconCacheRef.current.has(cacheKey)) return iconCacheRef.current.get(cacheKey)
+        const fallbackLabel = createMarkerGlyph(restaurantName || '?')
+        const safeLogoUrl = typeof logoUrl === 'string' && logoUrl.startsWith('http')
+          ? escapeHtml(logoUrl)
+          : ''
+        const icon = window.L.divIcon({
+          className: 'restaurant-logo-marker',
+          html: `
+            <span class="restaurant-logo-marker__shell">
+              ${safeLogoUrl
+                ? `<img src="${safeLogoUrl}" alt="" class="restaurant-logo-marker__image" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />`
+                : ''}
+              <span class="restaurant-logo-marker__fallback" style="display:${safeLogoUrl ? 'none' : 'flex'};">${escapeHtml(fallbackLabel)}</span>
+            </span>
+          `,
           iconSize: [34, 34],
           iconAnchor: [17, 34],
           popupAnchor: [0, -28],
-          className: 'restaurant-logo-marker',
         })
-        iconCacheRef.current.set(logoUrl, icon)
+        iconCacheRef.current.set(cacheKey, icon)
         return icon
       }
 
@@ -496,7 +516,7 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
         }
 
         visible.forEach(restaurant => {
-          const icon = getIcon(restaurant.logo_url)
+          const icon = getIcon(restaurant.logo_url, restaurant.restaurant_name)
           const marker = window.L.marker(
             [restaurant.latitude, restaurant.longitude],
             icon ? { icon } : undefined
