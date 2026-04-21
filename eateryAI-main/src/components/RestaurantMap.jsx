@@ -356,15 +356,31 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
         }
 
         appleAnnotationsRef.current = visible.map(restaurant => {
-          const annotation = new mapkit.MarkerAnnotation(
-            new mapkit.Coordinate(restaurant.latitude, restaurant.longitude),
-            {
-              title: restaurant.restaurant_name,
-              subtitle: restaurant.address || restaurant.phone || restaurant.hours || '',
-              color: isLight ? '#111827' : '#f59e0b',
-              glyphText: createMarkerGlyph(restaurant.restaurant_name),
-            }
+          const annotation = (
+            typeof restaurant.logo_url === 'string' && restaurant.logo_url.startsWith('http')
           )
+            ? new mapkit.ImageAnnotation(
+                new mapkit.Coordinate(restaurant.latitude, restaurant.longitude),
+                {
+                  url: {
+                    1: restaurant.logo_url,
+                  },
+                  size: { width: 34, height: 34 },
+                  title: restaurant.restaurant_name,
+                  subtitle: restaurant.address || restaurant.phone || restaurant.hours || '',
+                  clusteringIdentifier: 'restaurants',
+                }
+              )
+            : new mapkit.MarkerAnnotation(
+                new mapkit.Coordinate(restaurant.latitude, restaurant.longitude),
+                {
+                  title: restaurant.restaurant_name,
+                  subtitle: restaurant.address || restaurant.phone || restaurant.hours || '',
+                  color: isLight ? '#111827' : '#f59e0b',
+                  glyphText: createMarkerGlyph(restaurant.restaurant_name),
+                  clusteringIdentifier: 'restaurants',
+                }
+              )
 
           annotation.addEventListener('select', () => {
             openRestaurantTarget(restaurant.restaurant_name, onRestaurantClick)
@@ -649,92 +665,6 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
     }
   }, [isLight, onRestaurantClick])
 
-  function handleRecenter() {
-    const map = mapRef.current
-    if (!map) return
-
-    if (mapProvider === 'apple') {
-      if (userLocationRef.current && window.mapkit) {
-        setMapKitRegion(
-          window.mapkit,
-          map,
-          userLocationRef.current[0],
-          userLocationRef.current[1],
-          0.055
-        )
-        return
-      }
-
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          position => {
-            const { latitude, longitude } = position.coords
-            userLocationRef.current = [latitude, longitude]
-            setLocationStatus('ready')
-            if (window.mapkit) {
-              setMapKitRegion(window.mapkit, map, latitude, longitude, 0.055)
-            }
-          },
-          () => {
-            setLocationStatus('unavailable')
-            if (window.mapkit) {
-              setMapKitRegion(window.mapkit, map, DEFAULT_CENTER[0], DEFAULT_CENTER[1], 0.11)
-            }
-          },
-          { enableHighAccuracy: true, timeout: 8000 }
-        )
-      }
-
-      return
-    }
-
-    if (userLocationRef.current) {
-      map.setView(userLocationRef.current, Math.max(map.getZoom(), 14))
-      if (userMarkerRef.current) {
-        userMarkerRef.current.openPopup()
-      }
-      return
-    }
-
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        position => {
-          const { latitude, longitude } = position.coords
-          map.setView([latitude, longitude], 14)
-
-          const userIcon = window.L.divIcon({
-            className: 'user-location-marker',
-            html: '<span class="user-location-pulse"></span><span class="user-location-dot"></span>',
-            iconSize: [28, 28],
-            iconAnchor: [14, 14],
-            popupAnchor: [0, -14],
-          })
-
-          if (userMarkerRef.current) {
-            userMarkerRef.current.setLatLng([latitude, longitude])
-            userMarkerRef.current.setIcon(userIcon)
-          } else {
-            userMarkerRef.current = window.L.marker([latitude, longitude], {
-              icon: userIcon,
-              zIndexOffset: 2000,
-            })
-              .addTo(map)
-              .bindPopup('You are here')
-          }
-
-          userLocationRef.current = [latitude, longitude]
-          setLocationStatus('ready')
-          if (userMarkerRef.current) userMarkerRef.current.openPopup()
-        },
-        () => {
-          setLocationStatus('unavailable')
-          map.setView(DEFAULT_CENTER, DEFAULT_ZOOM)
-        },
-        { enableHighAccuracy: true, timeout: 8000 }
-      )
-    }
-  }
-
   return (
     <section className={`relative z-0 ${sidebar ? '' : 'h-full'}`}>
       {!sidebar && (
@@ -816,17 +746,6 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
               Home menu
             </button>
           )}
-          <button
-            type="button"
-            onClick={handleRecenter}
-            className={`rounded-full px-3 py-2 text-xs font-semibold shadow-sm transition ${
-              isLight
-                ? 'bg-white/90 text-gray-800 hover:bg-white'
-                : 'bg-[#1f232b]/90 text-white hover:bg-[#1f232b]'
-            }`}
-          >
-            Back to my location
-          </button>
         </div>
       </div>
     </section>
