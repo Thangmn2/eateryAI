@@ -282,7 +282,7 @@ function loadMapKit(token) {
   return window.__eateryMapKitPromise
 }
 
-export default function RestaurantMap({ theme, sidebar = false, onRestaurantClick }) {
+export default function RestaurantMap({ theme, sidebar = false, onRestaurantClick, onOpenMenu }) {
   const isLight = theme === 'light'
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
@@ -313,16 +313,13 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
 
       const map = new mapkit.Map(mapContainerRef.current, {
         center: new mapkit.Coordinate(DEFAULT_CENTER[0], DEFAULT_CENTER[1]),
+        colorScheme: isLight ? mapkit.Map.ColorSchemes.Light : mapkit.Map.ColorSchemes.Dark,
         isRotationEnabled: false,
         isScrollEnabled: true,
         isZoomEnabled: true,
         showsZoomControl: true,
         showsUserLocationControl: true,
       })
-
-      if (mapkit.ColorSchemes) {
-        map.colorScheme = isLight ? mapkit.ColorSchemes.Light : mapkit.ColorSchemes.Dark
-      }
 
       map.showsPointsOfInterest = true
       map.showsUserLocation = true
@@ -785,17 +782,32 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
               : 'h-full'
           }`}
         />
-        <button
-          type="button"
-          onClick={handleRecenter}
-          className={`absolute right-4 top-4 z-10 rounded-full px-3 py-2 text-xs font-semibold shadow-sm transition ${
-            isLight
-              ? 'bg-white/90 text-gray-800 hover:bg-white'
-              : 'bg-[#1f232b]/90 text-white hover:bg-[#1f232b]'
-          }`}
-        >
-          Back to my location
-        </button>
+        <div className="absolute bottom-4 right-4 z-10 flex flex-col items-end gap-2">
+          {onOpenMenu && (
+            <button
+              type="button"
+              onClick={onOpenMenu}
+              className={`rounded-full px-4 py-2 text-xs font-semibold shadow-sm transition ${
+                isLight
+                  ? 'bg-black text-white hover:bg-black/85'
+                  : 'bg-white text-black hover:bg-white/85'
+              }`}
+            >
+              Home menu
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleRecenter}
+            className={`rounded-full px-3 py-2 text-xs font-semibold shadow-sm transition ${
+              isLight
+                ? 'bg-white/90 text-gray-800 hover:bg-white'
+                : 'bg-[#1f232b]/90 text-white hover:bg-[#1f232b]'
+            }`}
+          >
+            Back to my location
+          </button>
+        </div>
       </div>
     </section>
   )

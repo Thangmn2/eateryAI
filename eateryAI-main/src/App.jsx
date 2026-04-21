@@ -256,7 +256,11 @@ export default function App() {
     >
       {view === 'map' ? (
         <main className={`h-[100dvh] overflow-hidden ${isLight ? 'bg-[#f6f1e8]' : 'bg-black'}`}>
-          <RestaurantMap theme={theme} onRestaurantClick={handleRestaurantSelect} />
+          <RestaurantMap
+            theme={theme}
+            onRestaurantClick={handleRestaurantSelect}
+            onOpenMenu={() => setView('menu')}
+          />
         </main>
       ) : (
         <>
