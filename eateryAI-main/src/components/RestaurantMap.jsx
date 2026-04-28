@@ -139,6 +139,66 @@ function escapeHtml(value) {
     .replaceAll("'", '&#39;')
 }
 
+function loadImageElement(url) {
+  return new Promise((resolve, reject) => {
+    const image = new window.Image()
+    image.crossOrigin = 'anonymous'
+    image.onload = () => resolve(image)
+    image.onerror = () => reject(new Error('Image could not be loaded.'))
+    image.src = url
+  })
+}
+
+async function createApplePinImageUrl(logoUrl) {
+  if (typeof window === 'undefined' || typeof logoUrl !== 'string' || !logoUrl.startsWith('http')) {
+    return ''
+  }
+
+  const image = await loadImageElement(logoUrl)
+  const canvas = document.createElement('canvas')
+  canvas.width = 76
+  canvas.height = 96
+  const context = canvas.getContext('2d')
+
+  if (!context) {
+    return ''
+  }
+
+  context.clearRect(0, 0, canvas.width, canvas.height)
+
+  context.save()
+  context.translate(canvas.width / 2, 72)
+  context.rotate(Math.PI / 4)
+  context.fillStyle = '#ffffff'
+  context.fillRect(-10, -10, 20, 20)
+  context.restore()
+
+  context.beginPath()
+  context.arc(canvas.width / 2, 34, 26, 0, Math.PI * 2)
+  context.fillStyle = '#ffffff'
+  context.shadowColor = 'rgba(15, 23, 42, 0.28)'
+  context.shadowBlur = 18
+  context.shadowOffsetY = 8
+  context.fill()
+  context.shadowColor = 'transparent'
+
+  context.save()
+  context.beginPath()
+  context.arc(canvas.width / 2, 34, 21.5, 0, Math.PI * 2)
+  context.closePath()
+  context.clip()
+  context.drawImage(image, 16.5, 12.5, 43, 43)
+  context.restore()
+
+  context.beginPath()
+  context.arc(canvas.width / 2, 34, 23, 0, Math.PI * 2)
+  context.lineWidth = 4
+  context.strokeStyle = '#ffffff'
+  context.stroke()
+
+  return canvas.toDataURL('image/png')
+}
+
 function isValidRestaurantCoordinate(restaurant) {
   return Number.isFinite(restaurant.latitude) && Number.isFinite(restaurant.longitude)
 }
@@ -377,6 +437,7 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
   const userLocationRef = useRef(null)
   const restaurantsRef = useRef([])
   const iconCacheRef = useRef(new Map())
+  const applePinImageCacheRef = useRef(new Map())
   const appleAnnotationsRef = useRef([])
   const refreshViewportRef = useRef(() => {})
   const searchQueryRef = useRef('')
@@ -463,7 +524,7 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
         }
       }
 
-      function refreshAppleAnnotations() {
+      async function refreshAppleAnnotations() {
         const region = map.region
         const bounds = getRegionBounds(region)
         const center = region?.center
@@ -485,17 +546,30 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
           map.removeAnnotations(appleAnnotationsRef.current)
         }
 
-        appleAnnotationsRef.current = visible.map(restaurant => {
-          const annotation = (
-            typeof restaurant.logo_url === 'string' && restaurant.logo_url.startsWith('http')
-          )
+        const nextAnnotations = await Promise.all(visible.map(async restaurant => {
+          let pinImageUrl = ''
+
+          if (typeof restaurant.logo_url === 'string' && restaurant.logo_url.startsWith('http')) {
+            if (applePinImageCacheRef.current.has(restaurant.logo_url)) {
+              pinImageUrl = applePinImageCacheRef.current.get(restaurant.logo_url)
+            } else {
+              try {
+                pinImageUrl = await createApplePinImageUrl(restaurant.logo_url)
+                applePinImageCacheRef.current.set(restaurant.logo_url, pinImageUrl)
+              } catch {
+                pinImageUrl = ''
+              }
+            }
+          }
+
+          const annotation = pinImageUrl
             ? new mapkit.ImageAnnotation(
                 new mapkit.Coordinate(restaurant.latitude, restaurant.longitude),
                 {
                   url: {
-                    1: restaurant.logo_url,
+                    1: pinImageUrl,
                   },
-                  size: { width: 38, height: 38 },
+                  size: { width: 38, height: 48 },
                   title: restaurant.restaurant_name,
                   subtitle: restaurant.address || restaurant.phone || restaurant.hours || '',
                   clusteringIdentifier: 'restaurants',
@@ -517,7 +591,10 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
           })
 
           return annotation
-        })
+        }))
+
+        if (cancelled) return
+        appleAnnotationsRef.current = nextAnnotations
 
         if (appleAnnotationsRef.current.length > 0) {
           map.addAnnotations(appleAnnotationsRef.current)
@@ -530,7 +607,9 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
         }
       }
 
-      refreshViewportRef.current = refreshAppleAnnotations
+      refreshViewportRef.current = () => {
+        void refreshAppleAnnotations()
+      }
 
       function handleAppleRegionChange() {
         void loadRestaurantsIntoAppleMap()
