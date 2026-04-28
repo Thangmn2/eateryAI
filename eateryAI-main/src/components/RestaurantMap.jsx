@@ -486,16 +486,31 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
         }
 
         appleAnnotationsRef.current = visible.map(restaurant => {
-          const annotation = new mapkit.MarkerAnnotation(
-            new mapkit.Coordinate(restaurant.latitude, restaurant.longitude),
-            {
-              title: restaurant.restaurant_name,
-              subtitle: restaurant.address || restaurant.phone || restaurant.hours || '',
-              color: isLight ? '#111827' : '#f59e0b',
-              glyphText: createMarkerGlyph(restaurant.restaurant_name),
-              clusteringIdentifier: 'restaurants',
-            }
+          const annotation = (
+            typeof restaurant.logo_url === 'string' && restaurant.logo_url.startsWith('http')
           )
+            ? new mapkit.ImageAnnotation(
+                new mapkit.Coordinate(restaurant.latitude, restaurant.longitude),
+                {
+                  url: {
+                    1: restaurant.logo_url,
+                  },
+                  size: { width: 38, height: 38 },
+                  title: restaurant.restaurant_name,
+                  subtitle: restaurant.address || restaurant.phone || restaurant.hours || '',
+                  clusteringIdentifier: 'restaurants',
+                }
+              )
+            : new mapkit.MarkerAnnotation(
+                new mapkit.Coordinate(restaurant.latitude, restaurant.longitude),
+                {
+                  title: restaurant.restaurant_name,
+                  subtitle: restaurant.address || restaurant.phone || restaurant.hours || '',
+                  color: isLight ? '#111827' : '#f59e0b',
+                  glyphText: createMarkerGlyph(restaurant.restaurant_name),
+                  clusteringIdentifier: 'restaurants',
+                }
+              )
 
           annotation.addEventListener('select', () => {
             openRestaurantTarget(restaurant.restaurant_name, onRestaurantClick)

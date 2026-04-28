@@ -1,6 +1,32 @@
 import { getMongoDb } from '../_lib/mongo.js'
 import { parseNonNegativeInt, parsePositiveInt, sendJson, withErrorHandling } from '../_lib/http.js'
 
+function mapMenuSections(doc) {
+  if (Array.isArray(doc?.menu_items) && doc.menu_items.length > 0) {
+    return doc.menu_items
+      .filter(section => section?.name && Array.isArray(section.items))
+      .map(section => ({
+        _id: doc._id,
+        restaurant: doc.restaurant || doc?._id?.restaurant_name || '',
+        category: section.name,
+        category_description: section.desc || '',
+        items: section.items,
+      }))
+  }
+
+  if (doc?.category && Array.isArray(doc.items)) {
+    return [{
+      _id: doc._id,
+      restaurant: doc.restaurant || doc?._id?.restaurant_name || '',
+      category: doc.category,
+      category_description: doc.category_description || '',
+      items: doc.items,
+    }]
+  }
+
+  return []
+}
+
 export default withErrorHandling(async function handler(req, res) {
   if (req.method !== 'GET') {
     return sendJson(res, 405, { error: 'Method not allowed.' })
@@ -16,6 +42,7 @@ export default withErrorHandling(async function handler(req, res) {
     .project({
       _id: 1,
       restaurant: 1,
+      menu_items: 1,
       category: 1,
       category_description: 1,
       items: 1,
@@ -24,10 +51,13 @@ export default withErrorHandling(async function handler(req, res) {
     .limit(limit)
     .toArray()
 
+  const items = docs.flatMap(mapMenuSections)
+
   return sendJson(res, 200, {
-    items: docs,
+    items,
     limit,
     skip,
-    returned: docs.length,
+    returned: items.length,
+    hasMore: docs.length === limit,
   })
 })

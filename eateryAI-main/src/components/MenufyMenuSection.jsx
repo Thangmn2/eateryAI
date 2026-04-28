@@ -114,7 +114,7 @@ export default function MenufyMenuSection({ theme, focusRestaurant }) {
     const payload = await res.json()
     const nextItems = Array.isArray(payload?.items) ? payload.items : []
     setRows(prev => (append ? [...prev, ...nextItems] : nextItems))
-    setHasMore(nextItems.length === PAGE_SIZE)
+    setHasMore(Boolean(payload?.hasMore))
   }
 
   useEffect(() => {

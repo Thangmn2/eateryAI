@@ -148,11 +148,13 @@ const server = http.createServer(async (req, res) => {
         .limit(safeLimit)
 
       const docs = await cursor.toArray()
+      const items = docs.flatMap(mapMenuSections)
       return sendJson(res, 200, {
-        items: docs,
+        items,
         limit: safeLimit,
         skip: safeSkip,
-        returned: docs.length,
+        returned: items.length,
+        hasMore: docs.length === safeLimit,
       })
     }
 
@@ -350,6 +352,32 @@ function splitTagList(value) {
     .split(',')
     .map(tag => tag.replace(/\s+/g, ' ').trim())
     .filter(Boolean)
+}
+
+function mapMenuSections(doc) {
+  if (Array.isArray(doc?.menu_items) && doc.menu_items.length > 0) {
+    return doc.menu_items
+      .filter(section => section?.name && Array.isArray(section.items))
+      .map(section => ({
+        _id: doc._id,
+        restaurant: doc.restaurant || doc?._id?.restaurant_name || '',
+        category: section.name,
+        category_description: section.desc || '',
+        items: section.items,
+      }))
+  }
+
+  if (doc?.category && Array.isArray(doc.items)) {
+    return [{
+      _id: doc._id,
+      restaurant: doc.restaurant || doc?._id?.restaurant_name || '',
+      category: doc.category,
+      category_description: doc.category_description || '',
+      items: doc.items,
+    }]
+  }
+
+  return []
 }
 
 function getAzureConfig() {
