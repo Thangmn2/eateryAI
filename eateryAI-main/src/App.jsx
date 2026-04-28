@@ -317,6 +317,26 @@ export default function App() {
           </div>
 
           <div id="menu-content" className="min-w-0">
+              {focusedMenufyRestaurant ? (
+                    <MenufyMenuSection theme={theme} focusRestaurant={focusedMenufyRestaurant} />
+                  ) : (
+                    <LazyRender
+                      rootMargin="300px"
+                      minHeight="320px"
+                      placeholder={(
+                        <section className="mt-12">
+                          <div className="flex items-center justify-between mb-4">
+                            <h2 className={`font-display text-2xl sm:text-3xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                              Menufy Menu
+                            </h2>
+                            <span className={`text-xs ${isLight ? 'text-warmgray' : 'text-white/60'}`}>Load on scroll</span>
+                          </div>
+                        </section>
+                      )}
+                    >
+                      <MenufyMenuSection theme={theme} focusRestaurant={focusedMenufyRestaurant} />
+                    </LazyRender>
+                  )}
             <p className={`mb-6 -mt-2 text-sm ${isLight ? 'text-warmgray-dark' : 'text-white/80'}`}>
               {totalItemCount} items across {restaurants.length} restaurants
             </p>
@@ -337,27 +357,6 @@ export default function App() {
                   />
                 ) : null}
               />
-
-              {focusedMenufyRestaurant ? (
-                <MenufyMenuSection theme={theme} focusRestaurant={focusedMenufyRestaurant} />
-              ) : (
-                <LazyRender
-                  rootMargin="300px"
-                  minHeight="320px"
-                  placeholder={(
-                    <section className="mt-12">
-                      <div className="flex items-center justify-between mb-4">
-                        <h2 className={`font-display text-2xl sm:text-3xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
-                          Menufy Menu
-                        </h2>
-                        <span className={`text-xs ${isLight ? 'text-warmgray' : 'text-white/60'}`}>Load on scroll</span>
-                      </div>
-                    </section>
-                  )}
-                >
-                  <MenufyMenuSection theme={theme} focusRestaurant={focusedMenufyRestaurant} />
-                </LazyRender>
-              )}
 
               {filteredUnconfirmed.length > 0 && (
                 <div className="mt-6">
