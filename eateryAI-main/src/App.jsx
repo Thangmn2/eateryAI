@@ -32,7 +32,7 @@ function loadInitialTheme() {
 }
 
 export default function App() {
-  const [view, setView] = useState('map')
+  const [showMap, setShowMap] = useState(true)
   const [selectedRestaurant, setSelectedRestaurant] = useState('All')
   const [focusedMenufyRestaurant, setFocusedMenufyRestaurant] = useState('')
   const [selectedItem, setSelectedItem] = useState(null)
@@ -154,9 +154,9 @@ export default function App() {
   function handleRestaurantSelect(name) {
     setFocusedMenufyRestaurant(name)
     setSelectedRestaurant(restaurants.includes(name) ? name : 'All')
-    setView('menu')
     requestAnimationFrame(() => {
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      const target = document.getElementById('menu-content')
+      target?.scrollIntoView({ top: 0, behavior: 'smooth' })
     })
   }
 
@@ -227,7 +227,6 @@ export default function App() {
       if (matchedRestaurant) {
         setSelectedRestaurant(matchedRestaurant)
         setFocusedMenufyRestaurant('')
-        setView('menu')
 
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
@@ -250,67 +249,68 @@ export default function App() {
 
   return (
     <div
-      className={`grain ${
-        view === 'map' ? 'h-[100dvh] overflow-hidden' : 'min-h-screen'
-      } ${isLight ? 'theme-light bg-[#f6f1e8]' : 'theme-dark bg-black'}`}
+      className={`grain min-h-screen ${isLight ? 'theme-light bg-[#f6f1e8]' : 'theme-dark bg-black'}`}
     >
-      {view === 'map' ? (
-        <main className={`h-[100dvh] overflow-hidden ${isLight ? 'bg-[#f6f1e8]' : 'bg-black'}`}>
-          <RestaurantMap
-            theme={theme}
-            onRestaurantClick={handleRestaurantSelect}
-            onOpenMenu={() => setView('menu')}
-          />
-        </main>
-      ) : (
-        <>
-          <GoalTracker
-            goals={goals}
-            totals={cartTotals}
-            onGoalsChange={setGoals}
-            cartCount={cart.reduce((s, e) => s + e.qty, 0)}
-            onCartClick={() => setShowCart(true)}
-            onOpenCamera={() => setShowCamera(true)}
-            onOpenGallery={() => setShowGallery(true)}
-            galleryScanCount={galleryScanCount}
-            theme={theme}
-            onThemeToggle={() => setTheme(current => current === 'light' ? 'dark' : 'light')}
-          />
+      <>
+        <GoalTracker
+          goals={goals}
+          totals={cartTotals}
+          onGoalsChange={setGoals}
+          cartCount={cart.reduce((s, e) => s + e.qty, 0)}
+          onCartClick={() => setShowCart(true)}
+          onOpenCamera={() => setShowCamera(true)}
+          onOpenGallery={() => setShowGallery(true)}
+          galleryScanCount={galleryScanCount}
+          theme={theme}
+          onThemeToggle={() => setTheme(current => current === 'light' ? 'dark' : 'light')}
+        />
 
-          <main className={`max-w-7xl mx-auto px-4 pt-4 sm:px-6 sm:pt-5 lg:px-8 lg:pt-6 pb-24 ${isLight ? 'bg-[#f6f1e8]' : 'bg-black'}`}>
-            <div className={`sticky top-[72px] z-30 -mx-4 mb-6 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 ${
+        <main className={`max-w-7xl mx-auto px-4 pt-4 sm:px-6 sm:pt-5 lg:px-8 lg:pt-6 pb-24 ${isLight ? 'bg-[#f6f1e8]' : 'bg-black'}`}>
+          {showMap && (
+            <RestaurantMap
+              theme={theme}
+              onRestaurantClick={handleRestaurantSelect}
+              onOpenMenu={() => setShowMap(false)}
+            />
+          )}
+
+          <div
+            className={`sticky top-[72px] z-30 -mx-4 mb-6 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 ${
               isLight ? 'bg-[#f6f1e8]/92 border-b border-black/10' : 'bg-black border-b border-white/10'
-            }`}>
-              <div className="mb-3">
+            }`}
+          >
+            <div className="mb-3">
+              {!showMap && (
                 <button
                   type="button"
-                  onClick={() => setView('map')}
+                  onClick={() => setShowMap(true)}
                   className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                     isLight
                       ? 'bg-black text-white hover:bg-black/85'
                       : 'bg-white text-black hover:bg-white/85'
                   }`}
                 >
-                  Back to map
+                  Show map
                 </button>
-              </div>
-
-              <RestaurantFilter
-                restaurants={restaurants}
-                selected={selectedRestaurant}
-                onSelect={value => {
-                  setSelectedRestaurant(value)
-                  setFocusedMenufyRestaurant('')
-                }}
-                counts={restaurantCounts}
-                theme={theme}
-              />
+              )}
             </div>
 
-            <div className="min-w-0">
-              <p className={`mb-6 -mt-2 text-sm ${isLight ? 'text-warmgray-dark' : 'text-white/80'}`}>
-                {totalItemCount} items across {restaurants.length} restaurants
-              </p>
+            <RestaurantFilter
+              restaurants={restaurants}
+              selected={selectedRestaurant}
+              onSelect={value => {
+                setSelectedRestaurant(value)
+                setFocusedMenufyRestaurant('')
+              }}
+              counts={restaurantCounts}
+              theme={theme}
+            />
+          </div>
+
+          <div id="menu-content" className="min-w-0">
+            <p className={`mb-6 -mt-2 text-sm ${isLight ? 'text-warmgray-dark' : 'text-white/80'}`}>
+              {totalItemCount} items across {restaurants.length} restaurants
+            </p>
 
               <MenuGrid
                 groupedItems={groupedConfirmed}
@@ -378,10 +378,9 @@ export default function App() {
                   </div>
                 </div>
               )}
-            </div>
-          </main>
-        </>
-      )}
+          </div>
+        </main>
+      </>
 
       <AnimatePresence>
         {showCamera && (

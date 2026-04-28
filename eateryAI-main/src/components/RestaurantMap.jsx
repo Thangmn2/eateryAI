@@ -592,16 +592,19 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
         const icon = window.L.divIcon({
           className: 'restaurant-logo-marker',
           html: `
-            <span class="restaurant-logo-marker__shell">
-              ${safeLogoUrl
-                ? `<img src="${safeLogoUrl}" alt="" class="restaurant-logo-marker__image" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />`
-                : ''}
-              <span class="restaurant-logo-marker__fallback" style="display:${safeLogoUrl ? 'none' : 'flex'};">${escapeHtml(fallbackLabel)}</span>
+            <span class="restaurant-logo-marker__pin">
+              <span class="restaurant-logo-marker__shell">
+                ${safeLogoUrl
+                  ? `<img src="${safeLogoUrl}" alt="" class="restaurant-logo-marker__image" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />`
+                  : ''}
+                <span class="restaurant-logo-marker__fallback" style="display:${safeLogoUrl ? 'none' : 'flex'};">${escapeHtml(fallbackLabel)}</span>
+              </span>
+              <span class="restaurant-logo-marker__tail"></span>
             </span>
           `,
-          iconSize: [34, 34],
-          iconAnchor: [17, 34],
-          popupAnchor: [0, -28],
+          iconSize: [38, 48],
+          iconAnchor: [19, 46],
+          popupAnchor: [0, -42],
         })
         iconCacheRef.current.set(cacheKey, icon)
         return icon
@@ -1009,21 +1012,6 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
               : 'h-[72vh]'
           }`}
         />
-        <div className="absolute bottom-4 right-4 z-10 flex flex-col items-end gap-2">
-          {onOpenMenu && (
-            <button
-              type="button"
-              onClick={onOpenMenu}
-              className={`rounded-full px-4 py-2 text-xs font-semibold shadow-sm transition ${
-                isLight
-                  ? 'bg-black text-white hover:bg-black/85'
-                  : 'bg-white text-black hover:bg-white/85'
-              }`}
-            >
-              Home menu
-            </button>
-          )}
-        </div>
       </div>
     </section>
   )
