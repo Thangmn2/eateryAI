@@ -826,6 +826,7 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
           <div className="flex items-center gap-3">
             <button
               type="button"
+              onClick={onOpenMenu}
               className={`rounded-full px-5 py-3 text-sm font-semibold transition ${
                 isLight
                   ? 'bg-black text-white hover:bg-black/85'
