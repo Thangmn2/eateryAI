@@ -48,6 +48,10 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'GET' && url.pathname === '/api/restaurants') {
+      const limit = parsePositiveInt(url.searchParams.get('limit'), 50, 100)
+      const userLatitude = Number.parseFloat(url.searchParams.get('user_latitude') || '')
+      const userLongitude = Number.parseFloat(url.searchParams.get('user_longitude') || '')
+      const hasUserLocation = Number.isFinite(userLatitude) && Number.isFinite(userLongitude)
       const db = await getMongoDb()
       const docs = await db.collection('menu_items').find({}, {
         projection: {
@@ -88,7 +92,20 @@ const server = http.createServer(async (req, res) => {
           }
         })
         .filter(doc => doc.restaurant_name && Number.isFinite(doc.latitude) && Number.isFinite(doc.longitude))
-        .sort((a, b) => a.restaurant_name.localeCompare(b.restaurant_name))
+        .sort((a, b) => {
+          if (hasUserLocation) {
+            return distanceSq(
+              [a.latitude, a.longitude],
+              [userLatitude, userLongitude]
+            ) - distanceSq(
+              [b.latitude, b.longitude],
+              [userLatitude, userLongitude]
+            )
+          }
+
+          return a.restaurant_name.localeCompare(b.restaurant_name)
+        })
+        .slice(0, limit)
 
       return sendJson(res, 200, payload)
     }
@@ -203,6 +220,21 @@ function stripQuotes(value) {
   }
 
   return value
+}
+
+function parsePositiveInt(value, fallback, max = Number.POSITIVE_INFINITY) {
+  const parsed = Number.parseInt(value, 10)
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback
+  }
+
+  return Math.min(parsed, max)
+}
+
+function distanceSq(a, b) {
+  const dx = a[0] - b[0]
+  const dy = a[1] - b[1]
+  return dx * dx + dy * dy
 }
 
 function getAzureConfig() {

@@ -1,11 +1,22 @@
 import { getMongoDb } from './_lib/mongo.js'
-import { sendJson, withErrorHandling } from './_lib/http.js'
+import { parsePositiveInt, sendJson, withErrorHandling } from './_lib/http.js'
 import { mapRestaurantDocument } from './_lib/restaurants.js'
+
+function distanceSq(a, b) {
+  const dx = a[0] - b[0]
+  const dy = a[1] - b[1]
+  return dx * dx + dy * dy
+}
 
 export default withErrorHandling(async function handler(req, res) {
   if (req.method !== 'GET') {
     return sendJson(res, 405, { error: 'Method not allowed.' })
   }
+
+  const limit = parsePositiveInt(req.query.limit, 50, 100)
+  const userLatitude = Number.parseFloat(req.query.user_latitude)
+  const userLongitude = Number.parseFloat(req.query.user_longitude)
+  const hasUserLocation = Number.isFinite(userLatitude) && Number.isFinite(userLongitude)
 
   const db = await getMongoDb()
   const docs = await db.collection('menu_items').find({}, {
@@ -28,7 +39,20 @@ export default withErrorHandling(async function handler(req, res) {
   const payload = docs
     .map(mapRestaurantDocument)
     .filter(doc => doc.restaurant_name && Number.isFinite(doc.latitude) && Number.isFinite(doc.longitude))
-    .sort((a, b) => a.restaurant_name.localeCompare(b.restaurant_name))
+    .sort((a, b) => {
+      if (hasUserLocation) {
+        return distanceSq(
+          [a.latitude, a.longitude],
+          [userLatitude, userLongitude]
+        ) - distanceSq(
+          [b.latitude, b.longitude],
+          [userLatitude, userLongitude]
+        )
+      }
+
+      return a.restaurant_name.localeCompare(b.restaurant_name)
+    })
+    .slice(0, limit)
 
   return sendJson(res, 200, payload)
 })

@@ -3,7 +3,7 @@ import slugify from '../utils/slugify'
 
 const DEFAULT_CENTER = [33.7419795, -117.8231586]
 const DEFAULT_ZOOM = 13
-const MAX_MARKERS = 300
+const MAX_MARKERS = 50
 const APPLE_MAPS_CDN = 'https://cdn.apple-mapkit.com/mk/5.x.x/mapkit.js'
 const LIGHT_TILE_LAYER = {
   url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -194,8 +194,17 @@ function selectRestaurantsForRegion(restaurants, bounds, center, maxMarkers = MA
   }
 }
 
-async function fetchRestaurants() {
-  const response = await fetch('/api/restaurants')
+async function fetchRestaurants({ latitude, longitude } = {}) {
+  const searchParams = new URLSearchParams({
+    limit: String(MAX_MARKERS),
+  })
+
+  if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+    searchParams.set('user_latitude', String(latitude))
+    searchParams.set('user_longitude', String(longitude))
+  }
+
+  const response = await fetch(`/api/restaurants?${searchParams.toString()}`)
   if (!response.ok) {
     throw new Error('Failed to load restaurants.')
   }
@@ -402,7 +411,11 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
 
       async function loadRestaurantsIntoAppleMap() {
         try {
-          restaurantsRef.current = await fetchRestaurants()
+          const nextLocation = userLocationRef.current
+          restaurantsRef.current = await fetchRestaurants({
+            latitude: nextLocation?.[0],
+            longitude: nextLocation?.[1],
+          })
           if (cancelled) return
           setStatus('ready')
           refreshAppleAnnotations()
@@ -579,7 +592,11 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
 
       async function loadRestaurantsIntoLeafletMap() {
         try {
-          restaurantsRef.current = await fetchRestaurants()
+          const nextLocation = userLocationRef.current
+          restaurantsRef.current = await fetchRestaurants({
+            latitude: nextLocation?.[0],
+            longitude: nextLocation?.[1],
+          })
           if (cancelled) return
           setStatus('ready')
           updateLeafletMarkers()
