@@ -46,6 +46,7 @@ export default function App() {
   const [chipotleBuilderData, setChipotleBuilderData] = useState(chipotleBuilderFallback)
   const [chipotleBuilderLoading, setChipotleBuilderLoading] = useState(true)
   const [theme, setTheme] = useState(loadInitialTheme)
+  const [showBackToTop, setShowBackToTop] = useState(false)
 
   const isLight = theme === 'light'
 
@@ -212,6 +213,19 @@ export default function App() {
     document.body.style.color = isLight ? '#111827' : '#ffffff'
     document.documentElement.style.colorScheme = isLight ? 'light' : 'dark'
   }, [isLight, theme])
+
+  useEffect(() => {
+    function handleScroll() {
+      setShowBackToTop(window.scrollY > 420)
+    }
+
+    handleScroll()
+    window.addEventListener('scroll', handleScroll, { passive: true })
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+    }
+  }, [])
 
   useEffect(() => {
     function syncRestaurantFromHash() {
@@ -435,6 +449,20 @@ export default function App() {
           />
         )}
       </AnimatePresence>
+
+      {showBackToTop && (
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'auto' })}
+          className={`fixed bottom-6 right-6 z-[1100] rounded-full px-4 py-2 text-sm font-semibold shadow-lg transition ${
+            isLight
+              ? 'bg-black text-white hover:bg-black/85'
+              : 'bg-white text-black hover:bg-white/85'
+          }`}
+        >
+          Return to top
+        </button>
+      )}
     </div>
   )
 }
