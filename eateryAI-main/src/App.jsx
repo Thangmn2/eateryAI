@@ -152,11 +152,19 @@ export default function App() {
   }
 
   function handleRestaurantSelect(name) {
+    const restaurantSlug = slugify(name)
     setFocusedMenufyRestaurant(name)
     setSelectedRestaurant(restaurants.includes(name) ? name : 'All')
+    setShowMap(false)
     requestAnimationFrame(() => {
       const target = document.getElementById('menu-content')
       target?.scrollIntoView({ top: 0, behavior: 'smooth' })
+      requestAnimationFrame(() => {
+        document.getElementById(`restaurant-${restaurantSlug}`)?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        })
+      })
     })
   }
 
@@ -227,6 +235,7 @@ export default function App() {
       if (matchedRestaurant) {
         setSelectedRestaurant(matchedRestaurant)
         setFocusedMenufyRestaurant('')
+        setShowMap(false)
 
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {

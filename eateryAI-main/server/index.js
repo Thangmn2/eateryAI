@@ -19,6 +19,7 @@ const PORT = Number.parseInt(process.env.PORT || '8787', 10)
 const OCR_POLL_INTERVAL_MS = Number.parseInt(process.env.OCR_POLL_INTERVAL_MS || '1500', 10)
 const OCR_MAX_ATTEMPTS = Number.parseInt(process.env.OCR_MAX_ATTEMPTS || '12', 10)
 const REQUEST_BODY_LIMIT_BYTES = 12 * 1024 * 1024
+const DEFAULT_PROXIMITY_LAT_SPAN = 2
 
 const MIME_TYPES = {
   '.css': 'text/css; charset=utf-8',
@@ -56,11 +57,13 @@ const server = http.createServer(async (req, res) => {
       const userLatitude = Number.parseFloat(url.searchParams.get('user_latitude') || '')
       const userLongitude = Number.parseFloat(url.searchParams.get('user_longitude') || '')
       const hasUserLocation = Number.isFinite(userLatitude) && Number.isFinite(userLongitude)
-      const bounds = [north, south, east, west].every(Number.isFinite)
+      const viewportBounds = [north, south, east, west].every(Number.isFinite)
         ? { north, south, east, west }
         : null
+      const effectiveBounds = viewportBounds || createProximityBounds(userLatitude, userLongitude)
+      const mongoQuery = createBoundsQuery(effectiveBounds) || {}
       const db = await getMongoDb()
-      const docs = await db.collection('menu_items').find({}, {
+      const docs = await db.collection('menu_items').find(mongoQuery, {
         projection: {
           _id: 1,
           restaurant: 1,
@@ -103,7 +106,7 @@ const server = http.createServer(async (req, res) => {
           }
         })
         .filter(doc => doc.restaurant_name && Number.isFinite(doc.latitude) && Number.isFinite(doc.longitude))
-        .filter(doc => isWithinBounds(doc, bounds))
+        .filter(doc => isWithinBounds(doc, effectiveBounds))
         .sort((a, b) => {
           if (hasUserLocation) {
             return distanceSq(
@@ -134,6 +137,13 @@ const server = http.createServer(async (req, res) => {
 
       const cursor = db.collection('menu_items')
         .find(restaurant ? { restaurant } : {})
+        .project({
+          _id: 1,
+          restaurant: 1,
+          category: 1,
+          category_description: 1,
+          items: 1,
+        })
         .skip(safeSkip)
         .limit(safeLimit)
 
@@ -260,6 +270,77 @@ function isWithinBounds(restaurant, bounds) {
   }
 
   return restaurant.longitude >= bounds.west || restaurant.longitude <= bounds.east
+}
+
+function normalizeLongitude(longitude) {
+  if (!Number.isFinite(longitude)) return longitude
+
+  let nextValue = longitude
+  while (nextValue > 180) nextValue -= 360
+  while (nextValue < -180) nextValue += 360
+  return nextValue
+}
+
+function createLongitudeRange(field, west, east) {
+  if (!Number.isFinite(west) || !Number.isFinite(east)) {
+    return null
+  }
+
+  if (west <= east) {
+    return { [field]: { $gte: west, $lte: east } }
+  }
+
+  return {
+    $or: [
+      { [field]: { $gte: west } },
+      { [field]: { $lte: east } },
+    ],
+  }
+}
+
+function createBoundsQuery(bounds) {
+  if (!bounds) return null
+
+  const coordinatePaths = [
+    ['location.coordinates.0', 'location.coordinates.1'],
+    ['_id.coords.0', '_id.coords.1'],
+    ['longitude_coordinates', 'latitude_coordinates'],
+  ]
+
+  return {
+    $or: coordinatePaths.map(([longitudePath, latitudePath]) => {
+      const longitudeClause = createLongitudeRange(longitudePath, bounds.west, bounds.east)
+      if (!longitudeClause) {
+        return {
+          [latitudePath]: { $gte: bounds.south, $lte: bounds.north },
+        }
+      }
+
+      return {
+        $and: [
+          { [latitudePath]: { $gte: bounds.south, $lte: bounds.north } },
+          longitudeClause,
+        ],
+      }
+    }),
+  }
+}
+
+function createProximityBounds(latitude, longitude) {
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return null
+  }
+
+  const latitudeSpan = DEFAULT_PROXIMITY_LAT_SPAN
+  const cosine = Math.max(0.2, Math.cos((latitude * Math.PI) / 180))
+  const longitudeSpan = DEFAULT_PROXIMITY_LAT_SPAN / cosine
+
+  return {
+    north: Math.min(90, latitude + latitudeSpan),
+    south: Math.max(-90, latitude - latitudeSpan),
+    east: normalizeLongitude(longitude + longitudeSpan),
+    west: normalizeLongitude(longitude - longitudeSpan),
+  }
 }
 
 function splitTagList(value) {

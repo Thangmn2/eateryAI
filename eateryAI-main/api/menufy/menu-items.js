@@ -13,6 +13,13 @@ export default withErrorHandling(async function handler(req, res) {
   const db = await getMongoDb()
   const docs = await db.collection('menu_items')
     .find(restaurant ? { restaurant } : {})
+    .project({
+      _id: 1,
+      restaurant: 1,
+      category: 1,
+      category_description: 1,
+      items: 1,
+    })
     .skip(skip)
     .limit(limit)
     .toArray()

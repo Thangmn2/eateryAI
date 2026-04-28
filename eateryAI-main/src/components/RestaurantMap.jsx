@@ -391,6 +391,8 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
   const [appleMapsIssue, setAppleMapsIssue] = useState(() => getAppleMapsTokenIssue(APPLE_MAPS_TOKEN))
   const [searchQuery, setSearchQuery] = useState('')
   const [filtersOpen, setFiltersOpen] = useState(true)
+  const [cuisineDropdownOpen, setCuisineDropdownOpen] = useState(false)
+  const [attributeDropdownOpen, setAttributeDropdownOpen] = useState(false)
   const [availableCuisineTags, setAvailableCuisineTags] = useState([])
   const [availableAttributeTags, setAvailableAttributeTags] = useState([])
   const [selectedCuisineTags, setSelectedCuisineTags] = useState([])
@@ -801,6 +803,8 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
     setSearchQuery('')
     setSelectedCuisineTags([])
     setSelectedAttributeTags([])
+    setCuisineDropdownOpen(false)
+    setAttributeDropdownOpen(false)
   }
 
   const hasActiveFilters =
@@ -942,64 +946,103 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
             </button>
           </div>
           {filtersOpen && (
-            <div className="mt-4 grid gap-4 lg:grid-cols-2">
-              <div className={`rounded-2xl border p-4 ${
-                isLight ? 'border-black/10 bg-white/80' : 'border-white/10 bg-[#0f1218]'
-              }`}>
-                <div className={`mb-3 text-sm font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>
-                  Cuisine tags
-                </div>
-                <div className="max-h-40 space-y-2 overflow-y-auto pr-1">
-                  {availableCuisineTags.length === 0 ? (
-                    <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-white/45'}`}>
-                      No cuisine tags available in this area yet.
+            <div className="mt-4 flex flex-wrap gap-3">
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCuisineDropdownOpen(current => !current)
+                    setAttributeDropdownOpen(false)
+                  }}
+                  className={`flex min-w-[13rem] items-center justify-between rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
+                    isLight
+                      ? 'border-black/10 bg-white text-black hover:bg-black/5'
+                      : 'border-white/10 bg-[#0f1218] text-white hover:bg-white/10'
+                  }`}
+                >
+                  <span>
+                    Cuisine
+                    {selectedCuisineTags.length > 0 ? ` (${selectedCuisineTags.length})` : ''}
+                  </span>
+                  <span className="text-xs">{cuisineDropdownOpen ? '▲' : '▼'}</span>
+                </button>
+                {cuisineDropdownOpen && (
+                  <div className={`absolute left-0 top-[calc(100%+0.5rem)] z-[2200] w-[20rem] rounded-2xl border p-3 shadow-2xl ${
+                    isLight ? 'border-black/10 bg-white' : 'border-white/10 bg-[#0f1218]'
+                  }`}>
+                    <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
+                      {availableCuisineTags.length === 0 ? (
+                        <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-white/45'}`}>
+                          No cuisine tags available in this area yet.
+                        </div>
+                      ) : availableCuisineTags.map(tag => (
+                        <label
+                          key={tag}
+                          className={`flex cursor-pointer items-center gap-3 rounded-xl px-2 py-1.5 text-sm ${
+                            isLight ? 'hover:bg-black/5' : 'hover:bg-white/5'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedCuisineTags.includes(tag)}
+                            onChange={() => toggleTag(tag, selectedCuisineTags, setSelectedCuisineTags)}
+                            className="h-4 w-4 rounded border-white/20"
+                          />
+                          <span className={isLight ? 'text-gray-800' : 'text-white/90'}>{tag}</span>
+                        </label>
+                      ))}
                     </div>
-                  ) : availableCuisineTags.map(tag => (
-                    <label
-                      key={tag}
-                      className={`flex cursor-pointer items-center gap-3 rounded-xl px-2 py-1.5 text-sm ${
-                        isLight ? 'hover:bg-black/5' : 'hover:bg-white/5'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedCuisineTags.includes(tag)}
-                        onChange={() => toggleTag(tag, selectedCuisineTags, setSelectedCuisineTags)}
-                        className="h-4 w-4 rounded border-white/20"
-                      />
-                      <span className={isLight ? 'text-gray-800' : 'text-white/90'}>{tag}</span>
-                    </label>
-                  ))}
-                </div>
+                  </div>
+                )}
               </div>
-              <div className={`rounded-2xl border p-4 ${
-                isLight ? 'border-black/10 bg-white/80' : 'border-white/10 bg-[#0f1218]'
-              }`}>
-                <div className={`mb-3 text-sm font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>
-                  Attribute tags
-                </div>
-                <div className="max-h-40 space-y-2 overflow-y-auto pr-1">
-                  {availableAttributeTags.length === 0 ? (
-                    <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-white/45'}`}>
-                      No attribute tags available in this area yet.
+
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAttributeDropdownOpen(current => !current)
+                    setCuisineDropdownOpen(false)
+                  }}
+                  className={`flex min-w-[13rem] items-center justify-between rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
+                    isLight
+                      ? 'border-black/10 bg-white text-black hover:bg-black/5'
+                      : 'border-white/10 bg-[#0f1218] text-white hover:bg-white/10'
+                  }`}
+                >
+                  <span>
+                    Attributes
+                    {selectedAttributeTags.length > 0 ? ` (${selectedAttributeTags.length})` : ''}
+                  </span>
+                  <span className="text-xs">{attributeDropdownOpen ? '▲' : '▼'}</span>
+                </button>
+                {attributeDropdownOpen && (
+                  <div className={`absolute left-0 top-[calc(100%+0.5rem)] z-[2200] w-[20rem] rounded-2xl border p-3 shadow-2xl ${
+                    isLight ? 'border-black/10 bg-white' : 'border-white/10 bg-[#0f1218]'
+                  }`}>
+                    <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
+                      {availableAttributeTags.length === 0 ? (
+                        <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-white/45'}`}>
+                          No attribute tags available in this area yet.
+                        </div>
+                      ) : availableAttributeTags.map(tag => (
+                        <label
+                          key={tag}
+                          className={`flex cursor-pointer items-center gap-3 rounded-xl px-2 py-1.5 text-sm ${
+                            isLight ? 'hover:bg-black/5' : 'hover:bg-white/5'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedAttributeTags.includes(tag)}
+                            onChange={() => toggleTag(tag, selectedAttributeTags, setSelectedAttributeTags)}
+                            className="h-4 w-4 rounded border-white/20"
+                          />
+                          <span className={isLight ? 'text-gray-800' : 'text-white/90'}>{tag}</span>
+                        </label>
+                      ))}
                     </div>
-                  ) : availableAttributeTags.map(tag => (
-                    <label
-                      key={tag}
-                      className={`flex cursor-pointer items-center gap-3 rounded-xl px-2 py-1.5 text-sm ${
-                        isLight ? 'hover:bg-black/5' : 'hover:bg-white/5'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedAttributeTags.includes(tag)}
-                        onChange={() => toggleTag(tag, selectedAttributeTags, setSelectedAttributeTags)}
-                        className="h-4 w-4 rounded border-white/20"
-                      />
-                      <span className={isLight ? 'text-gray-800' : 'text-white/90'}>{tag}</span>
-                    </label>
-                  ))}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

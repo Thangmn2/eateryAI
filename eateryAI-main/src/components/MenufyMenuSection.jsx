@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import slugify from '../utils/slugify'
 
-const PAGE_SIZE = 120
+const PAGE_SIZE = 24
 
 function parsePrice(value) {
   if (!value) return null
@@ -102,6 +102,7 @@ export default function MenufyMenuSection({ theme, focusRestaurant }) {
   const [error, setError] = useState('')
   const [hasMore, setHasMore] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const loadMoreRef = useRef(null)
 
   async function loadChunk({ append }) {
     const skip = append ? rows.length : 0
@@ -121,6 +122,7 @@ export default function MenufyMenuSection({ theme, focusRestaurant }) {
 
     async function loadMenufyData() {
       try {
+        setStatus('loading')
         await loadChunk({ append: false })
         if (isMounted) {
           setStatus('ready')
@@ -180,6 +182,26 @@ export default function MenufyMenuSection({ theme, focusRestaurant }) {
       isMounted = false
     }
   }, [focusRestaurant])
+
+  useEffect(() => {
+    if (focusRestaurant || !loadMoreRef.current || !hasMore || isLoadingMore) {
+      return undefined
+    }
+
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0]?.isIntersecting) {
+        void handleLoadMore()
+      }
+    }, {
+      rootMargin: '400px 0px',
+    })
+
+    observer.observe(loadMoreRef.current)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [focusRestaurant, hasMore, isLoadingMore, rows.length])
 
   async function handleLoadMore() {
     if (isLoadingMore || !hasMore) return
@@ -274,25 +296,23 @@ export default function MenufyMenuSection({ theme, focusRestaurant }) {
         </div>
       ))}
 
-      <div className="mt-6 flex items-center justify-center">
-        {hasMore ? (
-          <button
-            type="button"
-            onClick={handleLoadMore}
-            className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
+      {!focusRestaurant && (
+        <div ref={loadMoreRef} className="mt-6 flex min-h-12 items-center justify-center">
+          {hasMore ? (
+            <div className={`rounded-full px-4 py-2 text-sm font-semibold ${
               theme === 'light'
-                ? 'bg-black text-white hover:bg-black/90'
-                : 'bg-white text-black hover:bg-white/90'
-            }`}
-          >
-            {isLoadingMore ? 'Loading…' : 'Load more'}
-          </button>
-        ) : (
-          <span className={`text-xs ${theme === 'light' ? 'text-warmgray' : 'text-white/60'}`}>
-            All Menufy items loaded.
-          </span>
-        )}
-      </div>
+                ? 'border border-black/10 bg-white text-black/75'
+                : 'border border-white/10 bg-[#111317] text-white/70'
+            }`}>
+              {isLoadingMore ? 'Loading more restaurants…' : 'Scroll to load more restaurants'}
+            </div>
+          ) : (
+            <span className={`text-xs ${theme === 'light' ? 'text-warmgray' : 'text-white/60'}`}>
+              All Menufy items loaded.
+            </span>
+          )}
+        </div>
+      )}
     </section>
   )
 }
