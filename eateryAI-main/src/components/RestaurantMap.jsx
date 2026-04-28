@@ -484,31 +484,16 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
         }
 
         appleAnnotationsRef.current = visible.map(restaurant => {
-          const annotation = (
-            typeof restaurant.logo_url === 'string' && restaurant.logo_url.startsWith('http')
+          const annotation = new mapkit.MarkerAnnotation(
+            new mapkit.Coordinate(restaurant.latitude, restaurant.longitude),
+            {
+              title: restaurant.restaurant_name,
+              subtitle: restaurant.address || restaurant.phone || restaurant.hours || '',
+              color: isLight ? '#111827' : '#f59e0b',
+              glyphText: createMarkerGlyph(restaurant.restaurant_name),
+              clusteringIdentifier: 'restaurants',
+            }
           )
-            ? new mapkit.ImageAnnotation(
-                new mapkit.Coordinate(restaurant.latitude, restaurant.longitude),
-                {
-                  url: {
-                    1: restaurant.logo_url,
-                  },
-                  size: { width: 34, height: 34 },
-                  title: restaurant.restaurant_name,
-                  subtitle: restaurant.address || restaurant.phone || restaurant.hours || '',
-                  clusteringIdentifier: 'restaurants',
-                }
-              )
-            : new mapkit.MarkerAnnotation(
-                new mapkit.Coordinate(restaurant.latitude, restaurant.longitude),
-                {
-                  title: restaurant.restaurant_name,
-                  subtitle: restaurant.address || restaurant.phone || restaurant.hours || '',
-                  color: isLight ? '#111827' : '#f59e0b',
-                  glyphText: createMarkerGlyph(restaurant.restaurant_name),
-                  clusteringIdentifier: 'restaurants',
-                }
-              )
 
           annotation.addEventListener('select', () => {
             openRestaurantTarget(restaurant.restaurant_name, onRestaurantClick)
@@ -801,71 +786,226 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
     }
   }, [isLight, onRestaurantClick])
 
+  function toggleTag(tag, selectedTags, setSelectedTags) {
+    setSelectedTags(current =>
+      current.includes(tag)
+        ? current.filter(value => value !== tag)
+        : [...current, tag]
+    )
+  }
+
+  function clearFilters() {
+    setSearchQuery('')
+    setSelectedCuisineTags([])
+    setSelectedAttributeTags([])
+  }
+
+  const hasActiveFilters =
+    searchQuery.trim().length > 0 ||
+    selectedCuisineTags.length > 0 ||
+    selectedAttributeTags.length > 0
+
+  const statusOffsetClass = filtersOpen ? 'top-[13rem]' : 'top-24'
+
   return (
-    <section className={`relative z-0 ${sidebar ? '' : 'h-full'}`}>
+    <section className={`relative z-0 ${sidebar ? '' : 'mx-auto w-full max-w-[1760px] px-6 pb-8 pt-10'}`}>
       {!sidebar && (
-        <div className={`absolute left-4 bottom-4 z-[2000] flex items-center gap-3 rounded-full px-4 py-2 text-xs font-medium shadow-sm backdrop-blur ${
-          isLight ? 'bg-white/85' : 'bg-black/45'
+        <div className={`absolute left-10 bottom-12 z-[2000] flex items-center gap-3 rounded-full px-4 py-2 text-xs font-medium shadow-sm backdrop-blur ${
+          isLight ? 'bg-white/85 text-gray-900' : 'bg-black/55 text-white'
         }`}>
-          <div className={isLight ? 'text-gray-800' : 'text-white'}>
-            Showing {visibleCount} restaurants near this area
+          <div>
+            Showing {visibleCount} restaurants
           </div>
           <div className={isLight ? 'text-gray-600' : 'text-white/75'}>
             In view: {totalInView}
           </div>
         </div>
       )}
+      {!sidebar && (
+        <div className="mb-5 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              className={`rounded-full px-5 py-3 text-sm font-semibold transition ${
+                isLight
+                  ? 'bg-black text-white hover:bg-black/85'
+                  : 'bg-white text-black hover:bg-white/85'
+              }`}
+            >
+              Hide Map
+            </button>
+            <button
+              type="button"
+              className={`rounded-full px-5 py-3 text-sm font-semibold transition ${
+                isLight
+                  ? 'border border-black/10 bg-white text-black hover:bg-black/5'
+                  : 'border border-white/10 bg-[#12151b] text-white hover:bg-white/10'
+              }`}
+            >
+              All Restaurants
+            </button>
+          </div>
+        </div>
+      )}
       {status === 'error' && (
-        <div className={`absolute left-4 top-4 z-[2000] text-xs ${isLight ? 'text-red-600' : 'text-red-400'}`}>
+        <div className={`absolute left-10 ${statusOffsetClass} z-[2000] text-xs ${isLight ? 'text-red-600' : 'text-red-400'}`}>
           Could not load restaurants from the server.
         </div>
       )}
       {status !== 'error' && !APPLE_MAPS_TOKEN && (
-        <div className={`absolute left-4 top-4 z-[2000] text-xs ${isLight ? 'text-warmgray-dark' : 'text-white/70'}`}>
+        <div className={`absolute left-10 ${statusOffsetClass} z-[2000] text-xs ${isLight ? 'text-warmgray-dark' : 'text-white/70'}`}>
           Apple Maps is ready once `VITE_APPLE_MAPS_TOKEN` is added. Using OpenStreetMap for now.
         </div>
       )}
       {status !== 'error' && APPLE_MAPS_TOKEN && mapProvider === 'leaflet-fallback' && (
-        <div className={`absolute left-4 top-4 z-[2000] max-w-[28rem] text-xs ${isLight ? 'text-amber-700' : 'text-amber-300'}`}>
+        <div className={`absolute left-10 ${statusOffsetClass} z-[2000] max-w-[28rem] text-xs ${isLight ? 'text-amber-700' : 'text-amber-300'}`}>
           {appleMapsIssue || 'Apple Maps could not initialize, so the map fell back to OpenStreetMap.'}
         </div>
       )}
       {locationStatus === 'unavailable' && (
-        <div className={`absolute left-4 ${(!APPLE_MAPS_TOKEN || mapProvider === 'leaflet-fallback') ? 'top-10' : 'top-4'} z-[2000] text-xs ${isLight ? 'text-amber-700' : 'text-amber-300'}`}>
+        <div className={`absolute left-10 ${status === 'error' ? 'top-[14.75rem]' : 'top-[14.25rem]'} z-[2000] text-xs ${isLight ? 'text-amber-700' : 'text-amber-300'}`}>
           Location access is off, so your pin could not be shown.
         </div>
       )}
       {locationStatus === 'unsupported' && (
-        <div className={`absolute left-4 ${(!APPLE_MAPS_TOKEN || mapProvider === 'leaflet-fallback') ? 'top-10' : 'top-4'} z-[2000] text-xs ${isLight ? 'text-amber-700' : 'text-amber-300'}`}>
+        <div className={`absolute left-10 ${status === 'error' ? 'top-[14.75rem]' : 'top-[14.25rem]'} z-[2000] text-xs ${isLight ? 'text-amber-700' : 'text-amber-300'}`}>
           This browser does not support location detection.
         </div>
       )}
       {noNearby && (
-        <div className={`absolute left-4 ${
-          locationStatus === 'ready' || locationStatus === 'locating'
-            ? ((!APPLE_MAPS_TOKEN || mapProvider === 'leaflet-fallback') ? 'top-10' : 'top-4')
-            : ((!APPLE_MAPS_TOKEN || mapProvider === 'leaflet-fallback') ? 'top-16' : 'top-10')
-        } z-[2000] text-xs ${isLight ? 'text-warmgray-dark' : 'text-white/70'}`}>
+        <div className={`absolute left-10 top-[15.75rem] z-[2000] text-xs ${isLight ? 'text-warmgray-dark' : 'text-white/70'}`}>
           No restaurants were found in this area from the current dataset.
         </div>
       )}
       <div
-        className={`relative isolate z-0 overflow-hidden ${sidebar ? 'shadow-card' : 'h-full'} ${
+        className={`relative isolate z-0 overflow-hidden ${sidebar ? 'shadow-card' : 'min-h-[72vh] shadow-card'} ${
           sidebar
             ? isLight
               ? 'rounded-2xl border border-black/10 bg-white lg:rounded-r-none lg:border-r-0'
               : 'rounded-2xl border border-white/10 bg-[#111317] lg:rounded-r-none lg:border-r-0'
             : isLight
-              ? 'rounded-2xl border border-black/10 bg-white'
-              : 'rounded-2xl border border-white/10 bg-[#111317]'
+              ? 'rounded-[32px] border border-black/10 bg-white'
+              : 'rounded-[32px] border border-white/10 bg-[#111317]'
         }`}
       >
+        <div className={`absolute left-5 top-5 z-[2100] w-[min(52rem,calc(100%-5rem))] rounded-[24px] border px-4 py-3 shadow-2xl backdrop-blur-xl ${
+          isLight
+            ? 'border-black/10 bg-white/90'
+            : 'border-white/10 bg-[#171a21]/92'
+        }`}>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className={`flex min-w-[17rem] flex-1 items-center gap-3 rounded-2xl border px-4 py-3 ${
+              isLight ? 'border-black/10 bg-white' : 'border-white/10 bg-[#0f1218]'
+            }`}>
+              <span className={`text-sm ${isLight ? 'text-gray-500' : 'text-white/55'}`}>
+                Search
+              </span>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={event => setSearchQuery(event.target.value)}
+                placeholder="Restaurant, cuisine, address..."
+                className={`w-full bg-transparent text-sm outline-none ${
+                  isLight ? 'text-gray-900 placeholder:text-gray-400' : 'text-white placeholder:text-white/35'
+                }`}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setFiltersOpen(current => !current)}
+              className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
+                isLight
+                  ? 'border-black/10 bg-white text-black hover:bg-black/5'
+                  : 'border-white/10 bg-[#0f1218] text-white hover:bg-white/10'
+              }`}
+            >
+              {filtersOpen ? 'Hide filters' : 'Show filters'}
+            </button>
+            <button
+              type="button"
+              onClick={clearFilters}
+              className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
+                hasActiveFilters
+                  ? isLight
+                    ? 'border-black/10 bg-black text-white hover:bg-black/85'
+                    : 'border-white/10 bg-white text-black hover:bg-white/85'
+                  : isLight
+                    ? 'border-black/10 bg-white text-gray-400'
+                    : 'border-white/10 bg-[#0f1218] text-white/35'
+              }`}
+            >
+              Clear filters
+            </button>
+          </div>
+          {filtersOpen && (
+            <div className="mt-4 grid gap-4 lg:grid-cols-2">
+              <div className={`rounded-2xl border p-4 ${
+                isLight ? 'border-black/10 bg-white/80' : 'border-white/10 bg-[#0f1218]'
+              }`}>
+                <div className={`mb-3 text-sm font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                  Cuisine tags
+                </div>
+                <div className="max-h-40 space-y-2 overflow-y-auto pr-1">
+                  {availableCuisineTags.length === 0 ? (
+                    <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-white/45'}`}>
+                      No cuisine tags available in this area yet.
+                    </div>
+                  ) : availableCuisineTags.map(tag => (
+                    <label
+                      key={tag}
+                      className={`flex cursor-pointer items-center gap-3 rounded-xl px-2 py-1.5 text-sm ${
+                        isLight ? 'hover:bg-black/5' : 'hover:bg-white/5'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedCuisineTags.includes(tag)}
+                        onChange={() => toggleTag(tag, selectedCuisineTags, setSelectedCuisineTags)}
+                        className="h-4 w-4 rounded border-white/20"
+                      />
+                      <span className={isLight ? 'text-gray-800' : 'text-white/90'}>{tag}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className={`rounded-2xl border p-4 ${
+                isLight ? 'border-black/10 bg-white/80' : 'border-white/10 bg-[#0f1218]'
+              }`}>
+                <div className={`mb-3 text-sm font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                  Attribute tags
+                </div>
+                <div className="max-h-40 space-y-2 overflow-y-auto pr-1">
+                  {availableAttributeTags.length === 0 ? (
+                    <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-white/45'}`}>
+                      No attribute tags available in this area yet.
+                    </div>
+                  ) : availableAttributeTags.map(tag => (
+                    <label
+                      key={tag}
+                      className={`flex cursor-pointer items-center gap-3 rounded-xl px-2 py-1.5 text-sm ${
+                        isLight ? 'hover:bg-black/5' : 'hover:bg-white/5'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedAttributeTags.includes(tag)}
+                        onChange={() => toggleTag(tag, selectedAttributeTags, setSelectedAttributeTags)}
+                        className="h-4 w-4 rounded border-white/20"
+                      />
+                      <span className={isLight ? 'text-gray-800' : 'text-white/90'}>{tag}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
         <div
           ref={mapContainerRef}
           className={`relative z-0 w-full transition-[height] duration-300 ease-out ${
             sidebar
               ? 'h-[420px] lg:h-[calc(100vh-8.5rem)]'
-              : 'h-full'
+              : 'h-[72vh]'
           }`}
         />
         <div className="absolute bottom-4 right-4 z-10 flex flex-col items-end gap-2">
