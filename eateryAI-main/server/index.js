@@ -49,9 +49,16 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'GET' && url.pathname === '/api/restaurants') {
       const limit = parsePositiveInt(url.searchParams.get('limit'), 50, 100)
+      const north = Number.parseFloat(url.searchParams.get('north') || '')
+      const south = Number.parseFloat(url.searchParams.get('south') || '')
+      const east = Number.parseFloat(url.searchParams.get('east') || '')
+      const west = Number.parseFloat(url.searchParams.get('west') || '')
       const userLatitude = Number.parseFloat(url.searchParams.get('user_latitude') || '')
       const userLongitude = Number.parseFloat(url.searchParams.get('user_longitude') || '')
       const hasUserLocation = Number.isFinite(userLatitude) && Number.isFinite(userLongitude)
+      const bounds = [north, south, east, west].every(Number.isFinite)
+        ? { north, south, east, west }
+        : null
       const db = await getMongoDb()
       const docs = await db.collection('menu_items').find({}, {
         projection: {
@@ -92,6 +99,7 @@ const server = http.createServer(async (req, res) => {
           }
         })
         .filter(doc => doc.restaurant_name && Number.isFinite(doc.latitude) && Number.isFinite(doc.longitude))
+        .filter(doc => isWithinBounds(doc, bounds))
         .sort((a, b) => {
           if (hasUserLocation) {
             return distanceSq(
@@ -235,6 +243,19 @@ function distanceSq(a, b) {
   const dx = a[0] - b[0]
   const dy = a[1] - b[1]
   return dx * dx + dy * dy
+}
+
+function isWithinBounds(restaurant, bounds) {
+  if (!bounds) return true
+
+  const withinLatitude = restaurant.latitude >= bounds.south && restaurant.latitude <= bounds.north
+  if (!withinLatitude) return false
+
+  if (bounds.west <= bounds.east) {
+    return restaurant.longitude >= bounds.west && restaurant.longitude <= bounds.east
+  }
+
+  return restaurant.longitude >= bounds.west || restaurant.longitude <= bounds.east
 }
 
 function getAzureConfig() {

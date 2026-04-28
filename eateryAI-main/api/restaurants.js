@@ -8,15 +8,35 @@ function distanceSq(a, b) {
   return dx * dx + dy * dy
 }
 
+function isWithinBounds(restaurant, bounds) {
+  if (!bounds) return true
+
+  const withinLatitude = restaurant.latitude >= bounds.south && restaurant.latitude <= bounds.north
+  if (!withinLatitude) return false
+
+  if (bounds.west <= bounds.east) {
+    return restaurant.longitude >= bounds.west && restaurant.longitude <= bounds.east
+  }
+
+  return restaurant.longitude >= bounds.west || restaurant.longitude <= bounds.east
+}
+
 export default withErrorHandling(async function handler(req, res) {
   if (req.method !== 'GET') {
     return sendJson(res, 405, { error: 'Method not allowed.' })
   }
 
   const limit = parsePositiveInt(req.query.limit, 50, 100)
+  const north = Number.parseFloat(req.query.north)
+  const south = Number.parseFloat(req.query.south)
+  const east = Number.parseFloat(req.query.east)
+  const west = Number.parseFloat(req.query.west)
   const userLatitude = Number.parseFloat(req.query.user_latitude)
   const userLongitude = Number.parseFloat(req.query.user_longitude)
   const hasUserLocation = Number.isFinite(userLatitude) && Number.isFinite(userLongitude)
+  const bounds = [north, south, east, west].every(Number.isFinite)
+    ? { north, south, east, west }
+    : null
 
   const db = await getMongoDb()
   const docs = await db.collection('menu_items').find({}, {
@@ -39,6 +59,7 @@ export default withErrorHandling(async function handler(req, res) {
   const payload = docs
     .map(mapRestaurantDocument)
     .filter(doc => doc.restaurant_name && Number.isFinite(doc.latitude) && Number.isFinite(doc.longitude))
+    .filter(doc => isWithinBounds(doc, bounds))
     .sort((a, b) => {
       if (hasUserLocation) {
         return distanceSq(

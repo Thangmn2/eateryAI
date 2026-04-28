@@ -194,7 +194,7 @@ function selectRestaurantsForRegion(restaurants, bounds, center, maxMarkers = MA
   }
 }
 
-async function fetchRestaurants({ latitude, longitude } = {}) {
+async function fetchRestaurants({ latitude, longitude, bounds } = {}) {
   const searchParams = new URLSearchParams({
     limit: String(MAX_MARKERS),
   })
@@ -202,6 +202,13 @@ async function fetchRestaurants({ latitude, longitude } = {}) {
   if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
     searchParams.set('user_latitude', String(latitude))
     searchParams.set('user_longitude', String(longitude))
+  }
+
+  if (bounds) {
+    searchParams.set('north', String(bounds.north))
+    searchParams.set('south', String(bounds.south))
+    searchParams.set('east', String(bounds.east))
+    searchParams.set('west', String(bounds.west))
   }
 
   const response = await fetch(`/api/restaurants?${searchParams.toString()}`)
@@ -343,6 +350,25 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
       map.showsUserLocation = true
       mapRef.current = map
 
+      async function loadRestaurantsIntoAppleMap() {
+        try {
+          const region = map.region
+          const nextLocation = userLocationRef.current
+          restaurantsRef.current = await fetchRestaurants({
+            latitude: nextLocation?.[0] ?? region?.center?.latitude,
+            longitude: nextLocation?.[1] ?? region?.center?.longitude,
+            bounds: getRegionBounds(region),
+          })
+          if (cancelled) return
+          setStatus('ready')
+          refreshAppleAnnotations()
+        } catch {
+          if (!cancelled) {
+            setStatus('error')
+          }
+        }
+      }
+
       function refreshAppleAnnotations() {
         const region = map.region
         const bounds = getRegionBounds(region)
@@ -409,25 +435,8 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
         }
       }
 
-      async function loadRestaurantsIntoAppleMap() {
-        try {
-          const nextLocation = userLocationRef.current
-          restaurantsRef.current = await fetchRestaurants({
-            latitude: nextLocation?.[0],
-            longitude: nextLocation?.[1],
-          })
-          if (cancelled) return
-          setStatus('ready')
-          refreshAppleAnnotations()
-        } catch {
-          if (!cancelled) {
-            setStatus('error')
-          }
-        }
-      }
-
       function handleAppleRegionChange() {
-        refreshAppleAnnotations()
+        void loadRestaurantsIntoAppleMap()
       }
 
       map.addEventListener('region-change-end', handleAppleRegionChange)
@@ -592,10 +601,17 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
 
       async function loadRestaurantsIntoLeafletMap() {
         try {
+          const mapBounds = map.getBounds()
           const nextLocation = userLocationRef.current
           restaurantsRef.current = await fetchRestaurants({
-            latitude: nextLocation?.[0],
-            longitude: nextLocation?.[1],
+            latitude: nextLocation?.[0] ?? map.getCenter().lat,
+            longitude: nextLocation?.[1] ?? map.getCenter().lng,
+            bounds: {
+              north: mapBounds.getNorth(),
+              south: mapBounds.getSouth(),
+              east: mapBounds.getEast(),
+              west: mapBounds.getWest(),
+            },
           })
           if (cancelled) return
           setStatus('ready')
@@ -607,7 +623,11 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
         }
       }
 
-      map.on('moveend zoomend', updateLeafletMarkers)
+      function handleLeafletViewportChange() {
+        void loadRestaurantsIntoLeafletMap()
+      }
+
+      map.on('moveend zoomend', handleLeafletViewportChange)
 
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
@@ -635,7 +655,7 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
       mapRef.current = map
 
       cleanup = () => {
-        map.off('moveend zoomend', updateLeafletMarkers)
+        map.off('moveend zoomend', handleLeafletViewportChange)
         map.remove()
         mapRef.current = null
       }
