@@ -5,6 +5,8 @@ const DEFAULT_CENTER = [33.7419795, -117.8231586]
 const DEFAULT_ZOOM = 13
 const MAX_MARKERS = 50
 const APPLE_MAPS_CDN = 'https://cdn.apple-mapkit.com/mk/5.x.x/mapkit.js'
+const SHOW_APPLE_POINTS_OF_INTEREST = false
+const SHOW_APPLE_USER_LOCATION = true
 const LIGHT_TILE_LAYER = {
   url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
   attribution: '&copy; OpenStreetMap contributors',
@@ -500,8 +502,10 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
         showsUserLocationControl: true,
       })
 
-      map.showsPointsOfInterest = true
-      map.showsUserLocation = true
+      // MapKit JS only exposes POIs as a broad all-or-nothing layer.
+      // Keep this false if you want only MongoDB restaurant pins on the map.
+      map.showsPointsOfInterest = SHOW_APPLE_POINTS_OF_INTEREST
+      map.showsUserLocation = SHOW_APPLE_USER_LOCATION
       mapRef.current = map
 
       async function loadRestaurantsIntoAppleMap() {
