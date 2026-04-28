@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import slugify from '../utils/slugify'
 
-const PAGE_SIZE = 120
+const PAGE_SIZE = 24
 
 function parsePrice(value) {
   if (!value) return null
@@ -9,12 +9,32 @@ function parsePrice(value) {
   return Number.isFinite(num) && num > 0 ? num : null
 }
 
-function MenufyItemCard({ item, theme }) {
+function toCartItemShape(item, price) {
+  return {
+    'Item Name': item.name || 'Untitled item',
+    Restaurant: item.restaurant || 'Unknown restaurant',
+    Category: item.category || 'Other',
+    Source: 'Menufy',
+    Description: item.description || '',
+    Address: item.address || '',
+    'Image URL': item.item_image || '',
+    'Menu URL': item.menu_url || '',
+    'Price ($)': price !== null ? String(price) : '',
+    Calories: '',
+    'Protein (g)': '',
+    'Fat (g)': '',
+    'Nutrition Estimated': true,
+    'Cart Key': `menufy::${item.restaurant || 'unknown'}::${item.name || 'untitled'}`,
+  }
+}
+
+function MenufyItemCard({ item, theme, onAdd, inCartQty }) {
   const isLight = theme === 'light'
   const price = parsePrice(item.price)
   const hasPrice = price !== null
   const imgUrl = item.item_image || ''
   const hasImage = typeof imgUrl === 'string' && imgUrl.startsWith('http')
+  const cartItem = toCartItemShape(item, price)
 
   return (
     <div
@@ -63,16 +83,31 @@ function MenufyItemCard({ item, theme }) {
           ) : (
             <span className={`text-xs italic ${isLight ? 'text-warmgray-light' : 'text-white/45'}`}>Price N/A</span>
           )}
-          <span className={`text-[10px] uppercase tracking-wide ${isLight ? 'text-warmgray/70' : 'text-white/50'}`}>
-            No nutrition data
-          </span>
+          <div className="flex items-center gap-2">
+            {inCartQty > 0 ? (
+              <span className={`text-[10px] font-semibold ${isLight ? 'text-black/75' : 'text-white/70'}`}>
+                In cart: {inCartQty}
+              </span>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => onAdd?.(cartItem, 1)}
+              className={`rounded-full px-3 py-1 text-[11px] font-semibold transition ${
+                isLight
+                  ? 'bg-black text-white hover:bg-black/85'
+                  : 'bg-white text-black hover:bg-white/85'
+              }`}
+            >
+              Add
+            </button>
+          </div>
         </div>
       </div>
     </div>
   )
 }
 
-function CategorySection({ title, description, items, theme }) {
+function CategorySection({ title, description, items, theme, onAdd, cart }) {
   const isLight = theme === 'light'
 
   return (
@@ -87,21 +122,36 @@ function CategorySection({ title, description, items, theme }) {
         ) : null}
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-        {items.map((item, i) => (
-          <MenufyItemCard key={`${item.name}-${i}`} item={item} theme={theme} />
-        ))}
+        {items.map((item, i) => {
+          const cartEntry = cart.find(entry =>
+            entry.item?.Source === 'Menufy' &&
+            entry.item?.Restaurant === item.restaurant &&
+            entry.item?.['Item Name'] === item.name
+          )
+
+          return (
+            <MenufyItemCard
+              key={`${item.name}-${i}`}
+              item={item}
+              theme={theme}
+              onAdd={onAdd}
+              inCartQty={cartEntry?.qty || 0}
+            />
+          )
+        })}
       </div>
     </div>
   )
 }
 
-export default function MenufyMenuSection({ theme, focusRestaurant }) {
+export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart = [] }) {
   const [rows, setRows] = useState([])
   const [focusedRows, setFocusedRows] = useState([])
   const [status, setStatus] = useState('loading')
   const [error, setError] = useState('')
   const [hasMore, setHasMore] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const loadMoreRef = useRef(null)
 
   async function loadChunk({ append }) {
     const skip = append ? rows.length : 0
@@ -113,7 +163,7 @@ export default function MenufyMenuSection({ theme, focusRestaurant }) {
     const payload = await res.json()
     const nextItems = Array.isArray(payload?.items) ? payload.items : []
     setRows(prev => (append ? [...prev, ...nextItems] : nextItems))
-    setHasMore(nextItems.length === PAGE_SIZE)
+    setHasMore(Boolean(payload?.hasMore))
   }
 
   useEffect(() => {
@@ -121,6 +171,7 @@ export default function MenufyMenuSection({ theme, focusRestaurant }) {
 
     async function loadMenufyData() {
       try {
+        setStatus('loading')
         await loadChunk({ append: false })
         if (isMounted) {
           setStatus('ready')
@@ -180,6 +231,26 @@ export default function MenufyMenuSection({ theme, focusRestaurant }) {
       isMounted = false
     }
   }, [focusRestaurant])
+
+  useEffect(() => {
+    if (focusRestaurant || !loadMoreRef.current || !hasMore || isLoadingMore) {
+      return undefined
+    }
+
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0]?.isIntersecting) {
+        void handleLoadMore()
+      }
+    }, {
+      rootMargin: '400px 0px',
+    })
+
+    observer.observe(loadMoreRef.current)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [focusRestaurant, hasMore, isLoadingMore, rows.length])
 
   async function handleLoadMore() {
     if (isLoadingMore || !hasMore) return
@@ -269,30 +340,30 @@ export default function MenufyMenuSection({ theme, focusRestaurant }) {
               description={payload.description}
               items={payload.items}
               theme={theme}
+              onAdd={onAdd}
+              cart={cart}
             />
           ))}
         </div>
       ))}
 
-      <div className="mt-6 flex items-center justify-center">
-        {hasMore ? (
-          <button
-            type="button"
-            onClick={handleLoadMore}
-            className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
+      {!focusRestaurant && (
+        <div ref={loadMoreRef} className="mt-6 flex min-h-12 items-center justify-center">
+          {hasMore ? (
+            <div className={`rounded-full px-4 py-2 text-sm font-semibold ${
               theme === 'light'
-                ? 'bg-black text-white hover:bg-black/90'
-                : 'bg-white text-black hover:bg-white/90'
-            }`}
-          >
-            {isLoadingMore ? 'Loading…' : 'Load more'}
-          </button>
-        ) : (
-          <span className={`text-xs ${theme === 'light' ? 'text-warmgray' : 'text-white/60'}`}>
-            All Menufy items loaded.
-          </span>
-        )}
-      </div>
+                ? 'border border-black/10 bg-white text-black/75'
+                : 'border border-white/10 bg-[#111317] text-white/70'
+            }`}>
+              {isLoadingMore ? 'Loading more restaurants…' : 'Scroll to load more restaurants'}
+            </div>
+          ) : (
+            <span className={`text-xs ${theme === 'light' ? 'text-warmgray' : 'text-white/60'}`}>
+              All Menufy items loaded.
+            </span>
+          )}
+        </div>
+      )}
     </section>
   )
 }

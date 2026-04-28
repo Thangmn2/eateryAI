@@ -19,6 +19,7 @@ const PORT = Number.parseInt(process.env.PORT || '8787', 10)
 const OCR_POLL_INTERVAL_MS = Number.parseInt(process.env.OCR_POLL_INTERVAL_MS || '1500', 10)
 const OCR_MAX_ATTEMPTS = Number.parseInt(process.env.OCR_MAX_ATTEMPTS || '12', 10)
 const REQUEST_BODY_LIMIT_BYTES = 12 * 1024 * 1024
+const DEFAULT_PROXIMITY_LAT_SPAN = 2
 
 const MIME_TYPES = {
   '.css': 'text/css; charset=utf-8',
@@ -48,9 +49,23 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'GET' && url.pathname === '/api/restaurants') {
+      const limit = parsePositiveInt(url.searchParams.get('limit'), 50, 100)
+      const north = Number.parseFloat(url.searchParams.get('north') || '')
+      const south = Number.parseFloat(url.searchParams.get('south') || '')
+      const east = Number.parseFloat(url.searchParams.get('east') || '')
+      const west = Number.parseFloat(url.searchParams.get('west') || '')
+      const userLatitude = Number.parseFloat(url.searchParams.get('user_latitude') || '')
+      const userLongitude = Number.parseFloat(url.searchParams.get('user_longitude') || '')
+      const hasUserLocation = Number.isFinite(userLatitude) && Number.isFinite(userLongitude)
+      const viewportBounds = [north, south, east, west].every(Number.isFinite)
+        ? { north, south, east, west }
+        : null
+      const effectiveBounds = viewportBounds || createProximityBounds(userLatitude, userLongitude)
+      const mongoQuery = createBoundsQuery(effectiveBounds) || {}
       const db = await getMongoDb()
-      const docs = await db.collection('rest_info').find({}, {
+      const docs = await db.collection('menu_items').find(mongoQuery, {
         projection: {
+          _id: 1,
           restaurant: 1,
           address: 1,
           city: 1,
@@ -58,25 +73,54 @@ const server = http.createServer(async (req, res) => {
           logo_img: 1,
           phone_number: 1,
           restaurant_hours: 1,
+          cuisine_tags: 1,
+          attribute_tags: 1,
           latitude_coordinates: 1,
           longitude_coordinates: 1,
           restaurant_url: 1,
-          website: 1,
+          location: 1,
         },
       }).toArray()
 
-      const payload = docs.map(doc => ({
-        restaurant_name: doc.restaurant || '',
-        restaurant_url: doc.restaurant_url || doc.website || '',
-        address: doc.address || '',
-        city: doc.city || '',
-        state: doc.state || '',
-        latitude: Number(doc.latitude_coordinates),
-        longitude: Number(doc.longitude_coordinates),
-        logo_url: doc.logo_img || '',
-        phone: doc.phone_number || '',
-        hours: doc.restaurant_hours || '',
-      }))
+      const payload = docs
+        .map(doc => {
+          const nestedCoords = Array.isArray(doc?._id?.coords) ? doc._id.coords : null
+          const geoJsonCoords = Array.isArray(doc?.location?.coordinates) ? doc.location.coordinates : null
+          const fallbackCoords = nestedCoords || geoJsonCoords
+          const longitude = fallbackCoords?.[0] ?? doc.longitude_coordinates
+          const latitude = fallbackCoords?.[1] ?? doc.latitude_coordinates
+
+          return {
+            restaurant_name: doc.restaurant || doc?._id?.restaurant_name || '',
+            restaurant_url: doc.restaurant_url || '',
+            address: doc.address || doc?._id?.address || '',
+            city: doc.city || '',
+            state: doc.state || '',
+            latitude: Number(latitude),
+            longitude: Number(longitude),
+            logo_url: doc.logo_img || '',
+            phone: doc.phone_number || '',
+            hours: doc.restaurant_hours || '',
+            cuisine_tags: splitTagList(doc.cuisine_tags),
+            attribute_tags: splitTagList(doc.attribute_tags),
+          }
+        })
+        .filter(doc => doc.restaurant_name && Number.isFinite(doc.latitude) && Number.isFinite(doc.longitude))
+        .filter(doc => isWithinBounds(doc, effectiveBounds))
+        .sort((a, b) => {
+          if (hasUserLocation) {
+            return distanceSq(
+              [a.latitude, a.longitude],
+              [userLatitude, userLongitude]
+            ) - distanceSq(
+              [b.latitude, b.longitude],
+              [userLatitude, userLongitude]
+            )
+          }
+
+          return a.restaurant_name.localeCompare(b.restaurant_name)
+        })
+        .slice(0, limit)
 
       return sendJson(res, 200, payload)
     }
@@ -93,15 +137,24 @@ const server = http.createServer(async (req, res) => {
 
       const cursor = db.collection('menu_items')
         .find(restaurant ? { restaurant } : {})
+        .project({
+          _id: 1,
+          restaurant: 1,
+          category: 1,
+          category_description: 1,
+          items: 1,
+        })
         .skip(safeSkip)
         .limit(safeLimit)
 
       const docs = await cursor.toArray()
+      const items = docs.flatMap(mapMenuSections)
       return sendJson(res, 200, {
-        items: docs,
+        items,
         limit: safeLimit,
         skip: safeSkip,
-        returned: docs.length,
+        returned: items.length,
+        hasMore: docs.length === safeLimit,
       })
     }
 
@@ -191,6 +244,140 @@ function stripQuotes(value) {
   }
 
   return value
+}
+
+function parsePositiveInt(value, fallback, max = Number.POSITIVE_INFINITY) {
+  const parsed = Number.parseInt(value, 10)
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback
+  }
+
+  return Math.min(parsed, max)
+}
+
+function distanceSq(a, b) {
+  const dx = a[0] - b[0]
+  const dy = a[1] - b[1]
+  return dx * dx + dy * dy
+}
+
+function isWithinBounds(restaurant, bounds) {
+  if (!bounds) return true
+
+  const withinLatitude = restaurant.latitude >= bounds.south && restaurant.latitude <= bounds.north
+  if (!withinLatitude) return false
+
+  if (bounds.west <= bounds.east) {
+    return restaurant.longitude >= bounds.west && restaurant.longitude <= bounds.east
+  }
+
+  return restaurant.longitude >= bounds.west || restaurant.longitude <= bounds.east
+}
+
+function normalizeLongitude(longitude) {
+  if (!Number.isFinite(longitude)) return longitude
+
+  let nextValue = longitude
+  while (nextValue > 180) nextValue -= 360
+  while (nextValue < -180) nextValue += 360
+  return nextValue
+}
+
+function createLongitudeRange(field, west, east) {
+  if (!Number.isFinite(west) || !Number.isFinite(east)) {
+    return null
+  }
+
+  if (west <= east) {
+    return { [field]: { $gte: west, $lte: east } }
+  }
+
+  return {
+    $or: [
+      { [field]: { $gte: west } },
+      { [field]: { $lte: east } },
+    ],
+  }
+}
+
+function createBoundsQuery(bounds) {
+  if (!bounds) return null
+
+  const coordinatePaths = [
+    ['location.coordinates.0', 'location.coordinates.1'],
+    ['_id.coords.0', '_id.coords.1'],
+    ['longitude_coordinates', 'latitude_coordinates'],
+  ]
+
+  return {
+    $or: coordinatePaths.map(([longitudePath, latitudePath]) => {
+      const longitudeClause = createLongitudeRange(longitudePath, bounds.west, bounds.east)
+      if (!longitudeClause) {
+        return {
+          [latitudePath]: { $gte: bounds.south, $lte: bounds.north },
+        }
+      }
+
+      return {
+        $and: [
+          { [latitudePath]: { $gte: bounds.south, $lte: bounds.north } },
+          longitudeClause,
+        ],
+      }
+    }),
+  }
+}
+
+function createProximityBounds(latitude, longitude) {
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return null
+  }
+
+  const latitudeSpan = DEFAULT_PROXIMITY_LAT_SPAN
+  const cosine = Math.max(0.2, Math.cos((latitude * Math.PI) / 180))
+  const longitudeSpan = DEFAULT_PROXIMITY_LAT_SPAN / cosine
+
+  return {
+    north: Math.min(90, latitude + latitudeSpan),
+    south: Math.max(-90, latitude - latitudeSpan),
+    east: normalizeLongitude(longitude + longitudeSpan),
+    west: normalizeLongitude(longitude - longitudeSpan),
+  }
+}
+
+function splitTagList(value) {
+  if (typeof value !== 'string') return []
+
+  return value
+    .split(',')
+    .map(tag => tag.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+}
+
+function mapMenuSections(doc) {
+  if (Array.isArray(doc?.menu_items) && doc.menu_items.length > 0) {
+    return doc.menu_items
+      .filter(section => section?.name && Array.isArray(section.items))
+      .map(section => ({
+        _id: doc._id,
+        restaurant: doc.restaurant || doc?._id?.restaurant_name || '',
+        category: section.name,
+        category_description: section.desc || '',
+        items: section.items,
+      }))
+  }
+
+  if (doc?.category && Array.isArray(doc.items)) {
+    return [{
+      _id: doc._id,
+      restaurant: doc.restaurant || doc?._id?.restaurant_name || '',
+      category: doc.category,
+      category_description: doc.category_description || '',
+      items: doc.items,
+    }]
+  }
+
+  return []
 }
 
 function getAzureConfig() {
