@@ -155,7 +155,6 @@ export default function App() {
     const restaurantSlug = slugify(name)
     setFocusedMenufyRestaurant(name)
     setSelectedRestaurant(restaurants.includes(name) ? name : 'All')
-    setShowMap(false)
     requestAnimationFrame(() => {
       const target = document.getElementById('menu-content')
       target?.scrollIntoView({ top: 0, behavior: 'smooth' })
@@ -235,7 +234,6 @@ export default function App() {
       if (matchedRestaurant) {
         setSelectedRestaurant(matchedRestaurant)
         setFocusedMenufyRestaurant('')
-        setShowMap(false)
 
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
@@ -318,7 +316,12 @@ export default function App() {
 
           <div id="menu-content" className="min-w-0">
               {focusedMenufyRestaurant ? (
-                    <MenufyMenuSection theme={theme} focusRestaurant={focusedMenufyRestaurant} />
+                    <MenufyMenuSection
+                      theme={theme}
+                      focusRestaurant={focusedMenufyRestaurant}
+                      onAdd={addToCart}
+                      cart={cart}
+                    />
                   ) : (
                     <LazyRender
                       rootMargin="300px"
@@ -334,7 +337,12 @@ export default function App() {
                         </section>
                       )}
                     >
-                      <MenufyMenuSection theme={theme} focusRestaurant={focusedMenufyRestaurant} />
+                      <MenufyMenuSection
+                        theme={theme}
+                        focusRestaurant={focusedMenufyRestaurant}
+                        onAdd={addToCart}
+                        cart={cart}
+                      />
                     </LazyRender>
                   )}
             <p className={`mb-6 -mt-2 text-sm ${isLight ? 'text-warmgray-dark' : 'text-white/80'}`}>
