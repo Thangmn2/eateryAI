@@ -70,6 +70,8 @@ const server = http.createServer(async (req, res) => {
           logo_img: 1,
           phone_number: 1,
           restaurant_hours: 1,
+          cuisine_tags: 1,
+          attribute_tags: 1,
           latitude_coordinates: 1,
           longitude_coordinates: 1,
           restaurant_url: 1,
@@ -96,6 +98,8 @@ const server = http.createServer(async (req, res) => {
             logo_url: doc.logo_img || '',
             phone: doc.phone_number || '',
             hours: doc.restaurant_hours || '',
+            cuisine_tags: splitTagList(doc.cuisine_tags),
+            attribute_tags: splitTagList(doc.attribute_tags),
           }
         })
         .filter(doc => doc.restaurant_name && Number.isFinite(doc.latitude) && Number.isFinite(doc.longitude))
@@ -256,6 +260,15 @@ function isWithinBounds(restaurant, bounds) {
   }
 
   return restaurant.longitude >= bounds.west || restaurant.longitude <= bounds.east
+}
+
+function splitTagList(value) {
+  if (typeof value !== 'string') return []
+
+  return value
+    .split(',')
+    .map(tag => tag.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
 }
 
 function getAzureConfig() {

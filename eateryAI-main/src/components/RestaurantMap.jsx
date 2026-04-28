@@ -194,6 +194,53 @@ function selectRestaurantsForRegion(restaurants, bounds, center, maxMarkers = MA
   }
 }
 
+function normalizeSearchValue(value) {
+  return String(value || '').trim().toLowerCase()
+}
+
+function restaurantMatchesSearch(restaurant, query) {
+  if (!query) return true
+
+  const haystack = [
+    restaurant.restaurant_name,
+    restaurant.address,
+    restaurant.city,
+    restaurant.state,
+    ...(restaurant.cuisine_tags || []),
+    ...(restaurant.attribute_tags || []),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  return haystack.includes(query)
+}
+
+function restaurantMatchesTagFilters(restaurant, selectedCuisineTags, selectedAttributeTags) {
+  const cuisineTags = restaurant.cuisine_tags || []
+  const attributeTags = restaurant.attribute_tags || []
+
+  const matchesCuisine = selectedCuisineTags.length === 0 ||
+    selectedCuisineTags.some(tag => cuisineTags.includes(tag))
+  const matchesAttributes = selectedAttributeTags.length === 0 ||
+    selectedAttributeTags.some(tag => attributeTags.includes(tag))
+
+  return matchesCuisine && matchesAttributes
+}
+
+function filterRestaurants(restaurants, query, selectedCuisineTags, selectedAttributeTags) {
+  return restaurants.filter(restaurant =>
+    restaurantMatchesSearch(restaurant, query) &&
+    restaurantMatchesTagFilters(restaurant, selectedCuisineTags, selectedAttributeTags)
+  )
+}
+
+function collectTagOptions(restaurants, key) {
+  return [...new Set(
+    restaurants.flatMap(restaurant => Array.isArray(restaurant[key]) ? restaurant[key] : [])
+  )].sort((a, b) => a.localeCompare(b))
+}
+
 async function fetchRestaurants({ latitude, longitude, bounds } = {}) {
   const searchParams = new URLSearchParams({
     limit: String(MAX_MARKERS),
@@ -218,6 +265,20 @@ async function fetchRestaurants({ latitude, longitude, bounds } = {}) {
 
   const data = await response.json()
   return Array.isArray(data) ? data : []
+}
+
+async function fetchRestaurantsForViewport({ latitude, longitude, bounds } = {}) {
+  const primaryResults = await fetchRestaurants({ latitude, longitude, bounds })
+
+  if (
+    primaryResults.length > 0 ||
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude)
+  ) {
+    return primaryResults
+  }
+
+  return fetchRestaurants({ latitude, longitude })
 }
 
 function setMapKitRegion(mapkit, map, latitude, longitude, span = 0.075) {
@@ -315,9 +376,12 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
   const userMarkerRef = useRef(null)
   const userLocationRef = useRef(null)
   const restaurantsRef = useRef([])
-  const didAutoZoomRef = useRef(false)
   const iconCacheRef = useRef(new Map())
   const appleAnnotationsRef = useRef([])
+  const refreshViewportRef = useRef(() => {})
+  const searchQueryRef = useRef('')
+  const selectedCuisineTagsRef = useRef([])
+  const selectedAttributeTagsRef = useRef([])
   const [visibleCount, setVisibleCount] = useState(0)
   const [totalInView, setTotalInView] = useState(0)
   const [status, setStatus] = useState('loading')
@@ -325,6 +389,33 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
   const [locationStatus, setLocationStatus] = useState('locating')
   const [mapProvider, setMapProvider] = useState(APPLE_MAPS_TOKEN ? 'apple' : 'leaflet')
   const [appleMapsIssue, setAppleMapsIssue] = useState(() => getAppleMapsTokenIssue(APPLE_MAPS_TOKEN))
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filtersOpen, setFiltersOpen] = useState(true)
+  const [availableCuisineTags, setAvailableCuisineTags] = useState([])
+  const [availableAttributeTags, setAvailableAttributeTags] = useState([])
+  const [selectedCuisineTags, setSelectedCuisineTags] = useState([])
+  const [selectedAttributeTags, setSelectedAttributeTags] = useState([])
+
+  function syncTagOptions(restaurants) {
+    setAvailableCuisineTags(collectTagOptions(restaurants, 'cuisine_tags'))
+    setAvailableAttributeTags(collectTagOptions(restaurants, 'attribute_tags'))
+  }
+
+  function getFilteredRestaurants(restaurants) {
+    return filterRestaurants(
+      restaurants,
+      searchQueryRef.current,
+      selectedCuisineTagsRef.current,
+      selectedAttributeTagsRef.current
+    )
+  }
+
+  useEffect(() => {
+    searchQueryRef.current = normalizeSearchValue(searchQuery)
+    selectedCuisineTagsRef.current = selectedCuisineTags
+    selectedAttributeTagsRef.current = selectedAttributeTags
+    refreshViewportRef.current()
+  }, [searchQuery, selectedCuisineTags, selectedAttributeTags])
 
   useEffect(() => {
     let cancelled = false
@@ -354,12 +445,13 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
         try {
           const region = map.region
           const nextLocation = userLocationRef.current
-          restaurantsRef.current = await fetchRestaurants({
+          restaurantsRef.current = await fetchRestaurantsForViewport({
             latitude: nextLocation?.[0] ?? region?.center?.latitude,
             longitude: nextLocation?.[1] ?? region?.center?.longitude,
             bounds: getRegionBounds(region),
           })
           if (cancelled) return
+          syncTagOptions(restaurantsRef.current)
           setStatus('ready')
           refreshAppleAnnotations()
         } catch {
@@ -375,9 +467,10 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
         const center = region?.center
           ? [region.center.latitude, region.center.longitude]
           : userLocationRef.current || DEFAULT_CENTER
+        const filteredRestaurants = getFilteredRestaurants(restaurantsRef.current)
 
         const { candidates, visible } = selectRestaurantsForRegion(
-          restaurantsRef.current,
+          filteredRestaurants,
           bounds,
           center,
           MAX_MARKERS
@@ -430,10 +523,12 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
           return
         }
 
-        if (restaurantsRef.current.length > 0) {
+        if (filteredRestaurants.length > 0) {
           setNoNearby(true)
         }
       }
+
+      refreshViewportRef.current = refreshAppleAnnotations
 
       function handleAppleRegionChange() {
         void loadRestaurantsIntoAppleMap()
@@ -539,9 +634,10 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
           east: bounds.getEast(),
           west: bounds.getWest(),
         }
+        const filteredRestaurants = getFilteredRestaurants(restaurantsRef.current)
 
         const { candidates, visible } = selectRestaurantsForRegion(
-          restaurantsRef.current,
+          filteredRestaurants,
           regionBounds,
           [center.lat, center.lng],
           MAX_MARKERS
@@ -549,7 +645,7 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
 
         setTotalInView(candidates.length)
 
-        if (candidates.length === 0 && restaurantsRef.current.length > 0) {
+        if (candidates.length === 0 && filteredRestaurants.length > 0) {
           setNoNearby(true)
         }
 
@@ -572,6 +668,8 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
           setNoNearby(false)
         }
       }
+
+      refreshViewportRef.current = updateLeafletMarkers
 
       function setLeafletUserLocation(latitude, longitude) {
         userLocationRef.current = [latitude, longitude]
@@ -603,7 +701,7 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
         try {
           const mapBounds = map.getBounds()
           const nextLocation = userLocationRef.current
-          restaurantsRef.current = await fetchRestaurants({
+          restaurantsRef.current = await fetchRestaurantsForViewport({
             latitude: nextLocation?.[0] ?? map.getCenter().lat,
             longitude: nextLocation?.[1] ?? map.getCenter().lng,
             bounds: {
@@ -614,6 +712,7 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
             },
           })
           if (cancelled) return
+          syncTagOptions(restaurantsRef.current)
           setStatus('ready')
           updateLeafletMarkers()
         } catch {
@@ -668,10 +767,10 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
       setTotalInView(0)
       setLocationStatus('locating')
       restaurantsRef.current = []
-      didAutoZoomRef.current = false
       userLocationRef.current = null
       userMarkerRef.current = null
       appleAnnotationsRef.current = []
+      syncTagOptions([])
 
       if (APPLE_MAPS_TOKEN) {
         const tokenIssue = getAppleMapsTokenIssue(APPLE_MAPS_TOKEN)

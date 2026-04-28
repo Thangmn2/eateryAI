@@ -1,3 +1,12 @@
+function splitTagList(value) {
+  if (typeof value !== 'string') return []
+
+  return value
+    .split(',')
+    .map(tag => tag.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+}
+
 export function mapRestaurantDocument(doc) {
   const nestedCoords = Array.isArray(doc?._id?.coords) ? doc._id.coords : null
   const geoJsonCoords = Array.isArray(doc?.location?.coordinates) ? doc.location.coordinates : null
@@ -16,5 +25,7 @@ export function mapRestaurantDocument(doc) {
     logo_url: doc.logo_img || '',
     phone: doc.phone_number || '',
     hours: doc.restaurant_hours || '',
+    cuisine_tags: splitTagList(doc.cuisine_tags),
+    attribute_tags: splitTagList(doc.attribute_tags),
   }
 }

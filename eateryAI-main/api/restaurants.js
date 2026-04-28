@@ -49,6 +49,8 @@ export default withErrorHandling(async function handler(req, res) {
       logo_img: 1,
       phone_number: 1,
       restaurant_hours: 1,
+      cuisine_tags: 1,
+      attribute_tags: 1,
       latitude_coordinates: 1,
       longitude_coordinates: 1,
       restaurant_url: 1,
