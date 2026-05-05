@@ -4,6 +4,7 @@ import slugify from '../utils/slugify'
 const DEFAULT_CENTER = [33.7419795, -117.8231586]
 const DEFAULT_ZOOM = 13
 const MAX_MARKERS = 50
+const SEARCH_AREA_RADIUS_MILES = 10
 const APPLE_MAPS_CDN = 'https://cdn.apple-mapkit.com/mk/5.x.x/mapkit.js'
 const SHOW_APPLE_POINTS_OF_INTEREST = false
 const SHOW_APPLE_USER_LOCATION = true
@@ -221,6 +222,29 @@ function getRegionBounds(region) {
   }
 }
 
+function getSearchAreaSpan(latitude, radiusMiles = SEARCH_AREA_RADIUS_MILES) {
+  const latitudeDelta = (radiusMiles * 2) / 69
+  const longitudeDelta = latitudeDelta / Math.max(0.2, Math.cos((latitude * Math.PI) / 180))
+
+  return {
+    latitudeDelta,
+    longitudeDelta,
+  }
+}
+
+function shouldZoomIntoSearchArea(bounds, latitude, radiusMiles = SEARCH_AREA_RADIUS_MILES) {
+  if (!bounds || !Number.isFinite(latitude)) {
+    return false
+  }
+
+  const targetSpan = getSearchAreaSpan(latitude, radiusMiles)
+  const currentLatitudeDelta = Math.abs(bounds.north - bounds.south)
+  const currentLongitudeDelta = Math.abs(bounds.east - bounds.west)
+
+  return currentLatitudeDelta > targetSpan.latitudeDelta * 1.15 ||
+    currentLongitudeDelta > targetSpan.longitudeDelta * 1.15
+}
+
 function isCoordinateInBounds(latitude, longitude, bounds) {
   if (!bounds) return true
 
@@ -368,14 +392,14 @@ async function fetchRestaurantsForViewport({ latitude, longitude, bounds, query 
   return fetchRestaurants({ latitude, longitude, query })
 }
 
-function setMapKitRegion(mapkit, map, latitude, longitude, span = 0.075) {
+function setMapKitRegion(mapkit, map, latitude, longitude, latitudeSpan = 0.075, longitudeSpan = latitudeSpan) {
   const coordinate = new mapkit.Coordinate(latitude, longitude)
 
   try {
     map.setRegionAnimated(
       new mapkit.CoordinateRegion(
         coordinate,
-        new mapkit.CoordinateSpan(span, span)
+        new mapkit.CoordinateSpan(latitudeSpan, longitudeSpan)
       ),
       true
     )
@@ -990,6 +1014,64 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
     setSearchQuery(nextQuery)
     setSearchSuggestionsOpen(false)
     setSearchAreaPending(false)
+
+    if (!mapRef.current) {
+      reloadRestaurantsRef.current()
+      return
+    }
+
+    if (mapProvider === 'apple' && window.mapkit) {
+      const region = mapRef.current.region
+      const bounds = getRegionBounds(region)
+      const centerLatitude = region?.center?.latitude
+      const centerLongitude = region?.center?.longitude
+
+      if (
+        Number.isFinite(centerLatitude) &&
+        Number.isFinite(centerLongitude) &&
+        shouldZoomIntoSearchArea(bounds, centerLatitude)
+      ) {
+        const span = getSearchAreaSpan(centerLatitude)
+        suppressViewportRefreshRef.current = true
+        setMapKitRegion(
+          window.mapkit,
+          mapRef.current,
+          centerLatitude,
+          centerLongitude,
+          span.latitudeDelta,
+          span.longitudeDelta
+        )
+        window.setTimeout(() => reloadRestaurantsRef.current(), 260)
+        return
+      }
+    }
+
+    if (typeof mapRef.current?.getBounds === 'function' && typeof mapRef.current?.setView === 'function') {
+      const center = mapRef.current.getCenter()
+      const bounds = mapRef.current.getBounds()
+
+      if (shouldZoomIntoSearchArea({
+        north: bounds.getNorth(),
+        south: bounds.getSouth(),
+        east: bounds.getEast(),
+        west: bounds.getWest(),
+      }, center.lat)) {
+        const span = getSearchAreaSpan(center.lat)
+        const latitudeZoom = Math.max(
+          0,
+          Math.log2(360 / span.latitudeDelta)
+        )
+        const longitudeZoom = Math.max(
+          0,
+          Math.log2(360 / span.longitudeDelta)
+        )
+        suppressViewportRefreshRef.current = true
+        mapRef.current.setView([center.lat, center.lng], Math.max(13, Math.min(16, Math.floor(Math.min(latitudeZoom, longitudeZoom)))))
+        window.setTimeout(() => reloadRestaurantsRef.current(), 260)
+        return
+      }
+    }
+
     reloadRestaurantsRef.current()
   }
 

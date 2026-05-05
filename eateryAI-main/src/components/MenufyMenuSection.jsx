@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import slugify from '../utils/slugify'
 
-const PAGE_SIZE = 24
+const PAGE_SIZE = 12
 
 function parsePrice(value) {
   if (!value) return null
