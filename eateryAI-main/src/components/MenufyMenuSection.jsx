@@ -266,16 +266,20 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
 
   const grouped = useMemo(() => {
     const byRestaurant = {}
-    ;[...focusedRows, ...rows].forEach(row => {
+    const sourceRows = focusRestaurant ? focusedRows : rows
+
+    sourceRows.forEach(row => {
       if (!row?.restaurant || !row?.category || !Array.isArray(row.items)) return
       if (!byRestaurant[row.restaurant]) byRestaurant[row.restaurant] = {}
+      if (byRestaurant[row.restaurant][row.category]) return
+
       byRestaurant[row.restaurant][row.category] = {
         description: row.category_description || '',
         items: row.items,
       }
     })
     return byRestaurant
-  }, [focusedRows, rows])
+  }, [focusRestaurant, focusedRows, rows])
 
   if (status === 'loading') {
     return (

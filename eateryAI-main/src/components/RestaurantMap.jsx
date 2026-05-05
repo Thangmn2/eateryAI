@@ -320,7 +320,7 @@ function collectTagOptions(restaurants, key) {
   )].sort((a, b) => a.localeCompare(b))
 }
 
-async function fetchRestaurants({ latitude, longitude, bounds } = {}) {
+async function fetchRestaurants({ latitude, longitude, bounds, query } = {}) {
   const searchParams = new URLSearchParams({
     limit: String(MAX_MARKERS),
   })
@@ -337,6 +337,10 @@ async function fetchRestaurants({ latitude, longitude, bounds } = {}) {
     searchParams.set('west', String(bounds.west))
   }
 
+  if (query) {
+    searchParams.set('query', query)
+  }
+
   const response = await fetch(`/api/restaurants?${searchParams.toString()}`)
   if (!response.ok) {
     throw new Error('Failed to load restaurants.')
@@ -346,8 +350,8 @@ async function fetchRestaurants({ latitude, longitude, bounds } = {}) {
   return Array.isArray(data) ? data : []
 }
 
-async function fetchRestaurantsForViewport({ latitude, longitude, bounds } = {}) {
-  const primaryResults = await fetchRestaurants({ latitude, longitude, bounds })
+async function fetchRestaurantsForViewport({ latitude, longitude, bounds, query } = {}) {
+  const primaryResults = await fetchRestaurants({ latitude, longitude, bounds, query })
 
   if (
     primaryResults.length > 0 ||
@@ -357,7 +361,7 @@ async function fetchRestaurantsForViewport({ latitude, longitude, bounds } = {})
     return primaryResults
   }
 
-  return fetchRestaurants({ latitude, longitude })
+  return fetchRestaurants({ latitude, longitude, query })
 }
 
 function setMapKitRegion(mapkit, map, latitude, longitude, span = 0.075) {
@@ -459,6 +463,8 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
   const applePinImageCacheRef = useRef(new Map())
   const appleAnnotationsRef = useRef([])
   const refreshViewportRef = useRef(() => {})
+  const reloadRestaurantsRef = useRef(() => {})
+  const onRestaurantClickRef = useRef(onRestaurantClick)
   const searchQueryRef = useRef('')
   const selectedCuisineTagsRef = useRef([])
   const selectedAttributeTagsRef = useRef([])
@@ -494,10 +500,18 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
   }
 
   useEffect(() => {
+    onRestaurantClickRef.current = onRestaurantClick
+  }, [onRestaurantClick])
+
+  useEffect(() => {
     searchQueryRef.current = normalizeSearchValue(searchQuery)
     selectedCuisineTagsRef.current = selectedCuisineTags
     selectedAttributeTagsRef.current = selectedAttributeTags
-    refreshViewportRef.current()
+    if (searchQueryRef.current) {
+      reloadRestaurantsRef.current()
+    } else {
+      refreshViewportRef.current()
+    }
   }, [searchQuery, selectedCuisineTags, selectedAttributeTags])
 
   useEffect(() => {
@@ -530,10 +544,12 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
         try {
           const region = map.region
           const nextLocation = userLocationRef.current
+          const activeQuery = searchQueryRef.current
           restaurantsRef.current = await fetchRestaurantsForViewport({
             latitude: nextLocation?.[0] ?? region?.center?.latitude,
             longitude: nextLocation?.[1] ?? region?.center?.longitude,
-            bounds: getRegionBounds(region),
+            bounds: activeQuery ? null : getRegionBounds(region),
+            query: activeQuery || undefined,
           })
           if (cancelled) return
           syncTagOptions(restaurantsRef.current)
@@ -609,7 +625,7 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
               )
 
           annotation.addEventListener('select', () => {
-            openRestaurantTarget(restaurant.restaurant_name, onRestaurantClick)
+            openRestaurantTarget(restaurant.restaurant_name, onRestaurantClickRef.current)
           })
 
           return annotation
@@ -631,6 +647,9 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
 
       refreshViewportRef.current = () => {
         void refreshAppleAnnotations()
+      }
+      reloadRestaurantsRef.current = () => {
+        void loadRestaurantsIntoAppleMap()
       }
 
       function handleAppleRegionChange() {
@@ -765,7 +784,7 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
           marker.bindPopup(createPopupMarkup(restaurant))
           marker.on('mouseover', () => marker.openPopup())
           marker.on('mouseout', () => marker.closePopup())
-          marker.on('click', () => openRestaurantTarget(restaurant.restaurant_name, onRestaurantClick))
+          marker.on('click', () => openRestaurantTarget(restaurant.restaurant_name, onRestaurantClickRef.current))
           marker.addTo(markersLayerRef.current)
         })
 
@@ -776,6 +795,9 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
       }
 
       refreshViewportRef.current = updateLeafletMarkers
+      reloadRestaurantsRef.current = () => {
+        void loadRestaurantsIntoLeafletMap()
+      }
 
       function setLeafletUserLocation(latitude, longitude) {
         userLocationRef.current = [latitude, longitude]
@@ -807,15 +829,17 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
         try {
           const mapBounds = map.getBounds()
           const nextLocation = userLocationRef.current
+          const activeQuery = searchQueryRef.current
           restaurantsRef.current = await fetchRestaurantsForViewport({
             latitude: nextLocation?.[0] ?? map.getCenter().lat,
             longitude: nextLocation?.[1] ?? map.getCenter().lng,
-            bounds: {
+            bounds: activeQuery ? null : {
               north: mapBounds.getNorth(),
               south: mapBounds.getSouth(),
               east: mapBounds.getEast(),
               west: mapBounds.getWest(),
             },
+            query: activeQuery || undefined,
           })
           if (cancelled) return
           syncTagOptions(restaurantsRef.current)
@@ -905,7 +929,7 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
       cancelled = true
       cleanup()
     }
-  }, [isLight, onRestaurantClick])
+  }, [isLight])
 
   function toggleTag(tag, selectedTags, setSelectedTags) {
     setSelectedTags(current =>
