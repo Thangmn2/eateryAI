@@ -297,6 +297,23 @@ function filterRestaurants(restaurants, query, selectedCuisineTags, selectedAttr
   )
 }
 
+function buildSearchSuggestions(restaurants, query, maxSuggestions = 6) {
+  if (!query) return []
+
+  const normalizedQuery = normalizeSearchValue(query)
+  const seen = new Set()
+
+  return restaurants
+    .filter(restaurant => restaurantMatchesSearch(restaurant, normalizedQuery))
+    .filter(restaurant => {
+      const key = restaurant.restaurant_name
+      if (!key || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    .slice(0, maxSuggestions)
+}
+
 function collectTagOptions(restaurants, key) {
   return [...new Set(
     restaurants.flatMap(restaurant => Array.isArray(restaurant[key]) ? restaurant[key] : [])
@@ -453,6 +470,7 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
   const [mapProvider, setMapProvider] = useState(APPLE_MAPS_TOKEN ? 'apple' : 'leaflet')
   const [appleMapsIssue, setAppleMapsIssue] = useState(() => getAppleMapsTokenIssue(APPLE_MAPS_TOKEN))
   const [searchQuery, setSearchQuery] = useState('')
+  const [searchSuggestionsOpen, setSearchSuggestionsOpen] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(true)
   const [cuisineDropdownOpen, setCuisineDropdownOpen] = useState(false)
   const [attributeDropdownOpen, setAttributeDropdownOpen] = useState(false)
@@ -899,10 +917,27 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
 
   function clearFilters() {
     setSearchQuery('')
+    setSearchSuggestionsOpen(false)
     setSelectedCuisineTags([])
     setSelectedAttributeTags([])
     setCuisineDropdownOpen(false)
     setAttributeDropdownOpen(false)
+  }
+
+  function focusSuggestedRestaurant(restaurant) {
+    setSearchQuery(restaurant.restaurant_name || '')
+    setSearchSuggestionsOpen(false)
+
+    if (!mapRef.current) return
+
+    if (mapProvider === 'apple' && window.mapkit) {
+      setMapKitRegion(window.mapkit, mapRef.current, restaurant.latitude, restaurant.longitude, 0.04)
+      return
+    }
+
+    if (typeof mapRef.current?.setView === 'function') {
+      mapRef.current.setView([restaurant.latitude, restaurant.longitude], 15)
+    }
   }
 
   const hasActiveFilters =
@@ -911,6 +946,7 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
     selectedAttributeTags.length > 0
 
   const statusOffsetClass = filtersOpen ? 'top-[13rem]' : 'top-24'
+  const searchSuggestions = buildSearchSuggestions(restaurantsRef.current, searchQuery)
 
   return (
     <section className={`relative z-0 ${sidebar ? '' : 'mx-auto w-full max-w-[1760px] px-6 pb-8 pt-10'}`}>
@@ -1000,7 +1036,7 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
             : 'border-white/10 bg-[#171a21]/92'
         }`}>
           <div className="flex flex-wrap items-center gap-3">
-            <div className={`flex min-w-[17rem] flex-1 items-center gap-3 rounded-2xl border px-4 py-3 ${
+            <div className={`relative flex min-w-[17rem] flex-1 items-center gap-3 rounded-2xl border px-4 py-3 ${
               isLight ? 'border-black/10 bg-white' : 'border-white/10 bg-[#0f1218]'
             }`}>
               <span className={`text-sm ${isLight ? 'text-gray-500' : 'text-white/55'}`}>
@@ -1009,12 +1045,46 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
               <input
                 type="text"
                 value={searchQuery}
-                onChange={event => setSearchQuery(event.target.value)}
+                onChange={event => {
+                  setSearchQuery(event.target.value)
+                  setSearchSuggestionsOpen(true)
+                }}
+                onFocus={() => {
+                  if (searchQuery.trim()) {
+                    setSearchSuggestionsOpen(true)
+                  }
+                }}
+                onBlur={() => {
+                  window.setTimeout(() => setSearchSuggestionsOpen(false), 120)
+                }}
                 placeholder="Restaurant, cuisine, address..."
                 className={`w-full bg-transparent text-sm outline-none ${
                   isLight ? 'text-gray-900 placeholder:text-gray-400' : 'text-white placeholder:text-white/35'
                 }`}
               />
+              {searchSuggestionsOpen && searchSuggestions.length > 0 && (
+                <div className={`absolute left-0 right-0 top-[calc(100%+0.65rem)] z-[2300] overflow-hidden rounded-2xl border shadow-2xl ${
+                  isLight ? 'border-black/10 bg-white' : 'border-white/10 bg-[#0f1218]'
+                }`}>
+                  {searchSuggestions.map(restaurant => (
+                    <button
+                      key={`${restaurant.restaurant_name}-${restaurant.address}`}
+                      type="button"
+                      onMouseDown={() => focusSuggestedRestaurant(restaurant)}
+                      className={`flex w-full flex-col items-start gap-0.5 px-4 py-3 text-left transition ${
+                        isLight ? 'hover:bg-black/5' : 'hover:bg-white/5'
+                      }`}
+                    >
+                      <span className={`text-sm font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                        {restaurant.restaurant_name}
+                      </span>
+                      <span className={`text-xs ${isLight ? 'text-gray-500' : 'text-white/55'}`}>
+                        {[restaurant.address, restaurant.city, restaurant.state].filter(Boolean).join(', ')}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <button
               type="button"
