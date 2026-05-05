@@ -297,13 +297,30 @@ function filterRestaurants(restaurants, query, selectedCuisineTags, selectedAttr
   )
 }
 
+function buildSearchSuggestions(restaurants, query, maxSuggestions = 6) {
+  if (!query) return []
+
+  const normalizedQuery = normalizeSearchValue(query)
+  const seen = new Set()
+
+  return restaurants
+    .filter(restaurant => restaurantMatchesSearch(restaurant, normalizedQuery))
+    .filter(restaurant => {
+      const key = restaurant.restaurant_name
+      if (!key || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    .slice(0, maxSuggestions)
+}
+
 function collectTagOptions(restaurants, key) {
   return [...new Set(
     restaurants.flatMap(restaurant => Array.isArray(restaurant[key]) ? restaurant[key] : [])
   )].sort((a, b) => a.localeCompare(b))
 }
 
-async function fetchRestaurants({ latitude, longitude, bounds } = {}) {
+async function fetchRestaurants({ latitude, longitude, bounds, query } = {}) {
   const searchParams = new URLSearchParams({
     limit: String(MAX_MARKERS),
   })
@@ -320,6 +337,10 @@ async function fetchRestaurants({ latitude, longitude, bounds } = {}) {
     searchParams.set('west', String(bounds.west))
   }
 
+  if (query) {
+    searchParams.set('query', query)
+  }
+
   const response = await fetch(`/api/restaurants?${searchParams.toString()}`)
   if (!response.ok) {
     throw new Error('Failed to load restaurants.')
@@ -329,8 +350,12 @@ async function fetchRestaurants({ latitude, longitude, bounds } = {}) {
   return Array.isArray(data) ? data : []
 }
 
-async function fetchRestaurantsForViewport({ latitude, longitude, bounds } = {}) {
-  const primaryResults = await fetchRestaurants({ latitude, longitude, bounds })
+async function fetchRestaurantsForViewport({ latitude, longitude, bounds, query } = {}) {
+  const primaryResults = await fetchRestaurants({ latitude, longitude, bounds, query })
+
+  if (query) {
+    return primaryResults
+  }
 
   if (
     primaryResults.length > 0 ||
@@ -340,7 +365,7 @@ async function fetchRestaurantsForViewport({ latitude, longitude, bounds } = {})
     return primaryResults
   }
 
-  return fetchRestaurants({ latitude, longitude })
+  return fetchRestaurants({ latitude, longitude, query })
 }
 
 function setMapKitRegion(mapkit, map, latitude, longitude, span = 0.075) {
@@ -442,6 +467,9 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
   const applePinImageCacheRef = useRef(new Map())
   const appleAnnotationsRef = useRef([])
   const refreshViewportRef = useRef(() => {})
+  const reloadRestaurantsRef = useRef(() => {})
+  const onRestaurantClickRef = useRef(onRestaurantClick)
+  const suppressViewportRefreshRef = useRef(false)
   const searchQueryRef = useRef('')
   const selectedCuisineTagsRef = useRef([])
   const selectedAttributeTagsRef = useRef([])
@@ -453,6 +481,8 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
   const [mapProvider, setMapProvider] = useState(APPLE_MAPS_TOKEN ? 'apple' : 'leaflet')
   const [appleMapsIssue, setAppleMapsIssue] = useState(() => getAppleMapsTokenIssue(APPLE_MAPS_TOKEN))
   const [searchQuery, setSearchQuery] = useState('')
+  const [searchSuggestionsOpen, setSearchSuggestionsOpen] = useState(false)
+  const [searchAreaPending, setSearchAreaPending] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(true)
   const [cuisineDropdownOpen, setCuisineDropdownOpen] = useState(false)
   const [attributeDropdownOpen, setAttributeDropdownOpen] = useState(false)
@@ -474,6 +504,10 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
       selectedAttributeTagsRef.current
     )
   }
+
+  useEffect(() => {
+    onRestaurantClickRef.current = onRestaurantClick
+  }, [onRestaurantClick])
 
   useEffect(() => {
     searchQueryRef.current = normalizeSearchValue(searchQuery)
@@ -512,14 +546,17 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
         try {
           const region = map.region
           const nextLocation = userLocationRef.current
+          const activeQuery = searchQueryRef.current
           restaurantsRef.current = await fetchRestaurantsForViewport({
             latitude: nextLocation?.[0] ?? region?.center?.latitude,
             longitude: nextLocation?.[1] ?? region?.center?.longitude,
             bounds: getRegionBounds(region),
+            query: activeQuery || undefined,
           })
           if (cancelled) return
           syncTagOptions(restaurantsRef.current)
           setStatus('ready')
+          setSearchAreaPending(false)
           refreshAppleAnnotations()
         } catch {
           if (!cancelled) {
@@ -591,7 +628,7 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
               )
 
           annotation.addEventListener('select', () => {
-            openRestaurantTarget(restaurant.restaurant_name, onRestaurantClick)
+            openRestaurantTarget(restaurant.restaurant_name, onRestaurantClickRef.current)
           })
 
           return annotation
@@ -614,9 +651,18 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
       refreshViewportRef.current = () => {
         void refreshAppleAnnotations()
       }
+      reloadRestaurantsRef.current = () => {
+        void loadRestaurantsIntoAppleMap()
+      }
 
       function handleAppleRegionChange() {
-        void loadRestaurantsIntoAppleMap()
+        if (suppressViewportRefreshRef.current) {
+          suppressViewportRefreshRef.current = false
+          return
+        }
+
+        refreshViewportRef.current()
+        setSearchAreaPending(true)
       }
 
       map.addEventListener('region-change-end', handleAppleRegionChange)
@@ -629,6 +675,7 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
             const { latitude, longitude } = position.coords
             userLocationRef.current = [latitude, longitude]
             setLocationStatus('ready')
+            suppressViewportRefreshRef.current = true
             setMapKitRegion(mapkit, map, latitude, longitude, 0.055)
             void loadRestaurantsIntoAppleMap()
           },
@@ -747,7 +794,7 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
           marker.bindPopup(createPopupMarkup(restaurant))
           marker.on('mouseover', () => marker.openPopup())
           marker.on('mouseout', () => marker.closePopup())
-          marker.on('click', () => openRestaurantTarget(restaurant.restaurant_name, onRestaurantClick))
+          marker.on('click', () => openRestaurantTarget(restaurant.restaurant_name, onRestaurantClickRef.current))
           marker.addTo(markersLayerRef.current)
         })
 
@@ -758,6 +805,9 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
       }
 
       refreshViewportRef.current = updateLeafletMarkers
+      reloadRestaurantsRef.current = () => {
+        void loadRestaurantsIntoLeafletMap()
+      }
 
       function setLeafletUserLocation(latitude, longitude) {
         userLocationRef.current = [latitude, longitude]
@@ -789,6 +839,7 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
         try {
           const mapBounds = map.getBounds()
           const nextLocation = userLocationRef.current
+          const activeQuery = searchQueryRef.current
           restaurantsRef.current = await fetchRestaurantsForViewport({
             latitude: nextLocation?.[0] ?? map.getCenter().lat,
             longitude: nextLocation?.[1] ?? map.getCenter().lng,
@@ -798,10 +849,12 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
               east: mapBounds.getEast(),
               west: mapBounds.getWest(),
             },
+            query: activeQuery || undefined,
           })
           if (cancelled) return
           syncTagOptions(restaurantsRef.current)
           setStatus('ready')
+          setSearchAreaPending(false)
           updateLeafletMarkers()
         } catch {
           if (!cancelled) {
@@ -811,7 +864,13 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
       }
 
       function handleLeafletViewportChange() {
-        void loadRestaurantsIntoLeafletMap()
+        if (suppressViewportRefreshRef.current) {
+          suppressViewportRefreshRef.current = false
+          return
+        }
+
+        refreshViewportRef.current()
+        setSearchAreaPending(true)
       }
 
       map.on('moveend zoomend', handleLeafletViewportChange)
@@ -822,6 +881,7 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
             if (cancelled) return
 
             const { latitude, longitude } = position.coords
+            suppressViewportRefreshRef.current = true
             map.setView([latitude, longitude], 14)
             setLeafletUserLocation(latitude, longitude)
             void loadRestaurantsIntoLeafletMap()
@@ -887,7 +947,7 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
       cancelled = true
       cleanup()
     }
-  }, [isLight, onRestaurantClick])
+  }, [isLight])
 
   function toggleTag(tag, selectedTags, setSelectedTags) {
     setSelectedTags(current =>
@@ -899,10 +959,38 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
 
   function clearFilters() {
     setSearchQuery('')
+    setSearchSuggestionsOpen(false)
     setSelectedCuisineTags([])
     setSelectedAttributeTags([])
     setCuisineDropdownOpen(false)
     setAttributeDropdownOpen(false)
+    reloadRestaurantsRef.current()
+  }
+
+  function focusSuggestedRestaurant(restaurant) {
+    setSearchQuery(restaurant.restaurant_name || '')
+    setSearchSuggestionsOpen(false)
+    setSearchAreaPending(false)
+
+    if (!mapRef.current) return
+
+    if (mapProvider === 'apple' && window.mapkit) {
+      suppressViewportRefreshRef.current = true
+      setMapKitRegion(window.mapkit, mapRef.current, restaurant.latitude, restaurant.longitude, 0.04)
+      return
+    }
+
+    if (typeof mapRef.current?.setView === 'function') {
+      suppressViewportRefreshRef.current = true
+      mapRef.current.setView([restaurant.latitude, restaurant.longitude], 15)
+    }
+  }
+
+  function executeSearchInCurrentArea(nextQuery = searchQuery) {
+    setSearchQuery(nextQuery)
+    setSearchSuggestionsOpen(false)
+    setSearchAreaPending(false)
+    reloadRestaurantsRef.current()
   }
 
   const hasActiveFilters =
@@ -911,6 +999,7 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
     selectedAttributeTags.length > 0
 
   const statusOffsetClass = filtersOpen ? 'top-[13rem]' : 'top-24'
+  const searchSuggestions = buildSearchSuggestions(restaurantsRef.current, searchQuery)
 
   return (
     <section className={`relative z-0 ${sidebar ? '' : 'mx-auto w-full max-w-[1760px] px-6 pb-8 pt-10'}`}>
@@ -983,6 +1072,21 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
           No restaurants were found in this area from the current dataset.
         </div>
       )}
+      {searchAreaPending && (
+        <div className="absolute left-1/2 top-[10.5rem] z-[2200] -translate-x-1/2">
+          <button
+            type="button"
+            onClick={() => executeSearchInCurrentArea(searchQuery)}
+            className={`rounded-full px-5 py-2.5 text-sm font-semibold shadow-lg transition ${
+              isLight
+                ? 'bg-black text-white hover:bg-black/85'
+                : 'bg-white text-black hover:bg-white/85'
+            }`}
+          >
+            Search this area
+          </button>
+        </div>
+      )}
       <div
         className={`relative isolate z-0 overflow-hidden ${sidebar ? 'shadow-card' : 'min-h-[72vh] shadow-card'} ${
           sidebar
@@ -1000,7 +1104,7 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
             : 'border-white/10 bg-[#171a21]/92'
         }`}>
           <div className="flex flex-wrap items-center gap-3">
-            <div className={`flex min-w-[17rem] flex-1 items-center gap-3 rounded-2xl border px-4 py-3 ${
+            <div className={`relative flex min-w-[17rem] flex-1 items-center gap-3 rounded-2xl border px-4 py-3 ${
               isLight ? 'border-black/10 bg-white' : 'border-white/10 bg-[#0f1218]'
             }`}>
               <span className={`text-sm ${isLight ? 'text-gray-500' : 'text-white/55'}`}>
@@ -1009,12 +1113,68 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
               <input
                 type="text"
                 value={searchQuery}
-                onChange={event => setSearchQuery(event.target.value)}
+                onChange={event => {
+                  setSearchQuery(event.target.value)
+                  setSearchSuggestionsOpen(true)
+                }}
+                onKeyDown={event => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault()
+                    executeSearchInCurrentArea(event.currentTarget.value)
+                  }
+                }}
+                onFocus={() => {
+                  if (searchQuery.trim()) {
+                    setSearchSuggestionsOpen(true)
+                  }
+                }}
+                onBlur={() => {
+                  window.setTimeout(() => setSearchSuggestionsOpen(false), 120)
+                }}
                 placeholder="Restaurant, cuisine, address..."
                 className={`w-full bg-transparent text-sm outline-none ${
                   isLight ? 'text-gray-900 placeholder:text-gray-400' : 'text-white placeholder:text-white/35'
                 }`}
               />
+              {searchSuggestionsOpen && searchQuery.trim().length > 0 && (
+                <div className={`absolute left-0 right-0 top-[calc(100%+0.65rem)] z-[2300] overflow-hidden rounded-2xl border shadow-2xl ${
+                  isLight ? 'border-black/10 bg-white' : 'border-white/10 bg-[#0f1218]'
+                }`}>
+                  <button
+                    type="button"
+                    onMouseDown={() => executeSearchInCurrentArea(searchQuery)}
+                    className={`flex w-full flex-col items-start gap-0.5 border-b px-4 py-3 text-left transition ${
+                      isLight
+                        ? 'border-black/5 hover:bg-black/5'
+                        : 'border-white/10 hover:bg-white/5'
+                    }`}
+                  >
+                    <span className={`text-sm font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                      Search for "{searchQuery}"
+                    </span>
+                    <span className={`text-xs ${isLight ? 'text-gray-500' : 'text-white/55'}`}>
+                      Search within the area shown on the map right now
+                    </span>
+                  </button>
+                  {searchSuggestions.map(restaurant => (
+                    <button
+                      key={`${restaurant.restaurant_name}-${restaurant.address}`}
+                      type="button"
+                      onMouseDown={() => focusSuggestedRestaurant(restaurant)}
+                      className={`flex w-full flex-col items-start gap-0.5 px-4 py-3 text-left transition ${
+                        isLight ? 'hover:bg-black/5' : 'hover:bg-white/5'
+                      }`}
+                    >
+                      <span className={`text-sm font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                        {restaurant.restaurant_name}
+                      </span>
+                      <span className={`text-xs ${isLight ? 'text-gray-500' : 'text-white/55'}`}>
+                        {[restaurant.address, restaurant.city, restaurant.state].filter(Boolean).join(', ')}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <button
               type="button"

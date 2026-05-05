@@ -54,6 +54,7 @@ const server = http.createServer(async (req, res) => {
       const south = Number.parseFloat(url.searchParams.get('south') || '')
       const east = Number.parseFloat(url.searchParams.get('east') || '')
       const west = Number.parseFloat(url.searchParams.get('west') || '')
+      const query = String(url.searchParams.get('query') || '').trim()
       const userLatitude = Number.parseFloat(url.searchParams.get('user_latitude') || '')
       const userLongitude = Number.parseFloat(url.searchParams.get('user_longitude') || '')
       const hasUserLocation = Number.isFinite(userLatitude) && Number.isFinite(userLongitude)
@@ -61,7 +62,11 @@ const server = http.createServer(async (req, res) => {
         ? { north, south, east, west }
         : null
       const effectiveBounds = viewportBounds || createProximityBounds(userLatitude, userLongitude)
-      const mongoQuery = createBoundsQuery(effectiveBounds) || {}
+      const boundsQuery = createBoundsQuery(effectiveBounds)
+      const searchQuery = createSearchQuery(query)
+      const mongoQuery = searchQuery && boundsQuery
+        ? { $and: [boundsQuery, searchQuery] }
+        : searchQuery || boundsQuery || {}
       const db = await getMongoDb()
       const docs = await db.collection('menu_items').find(mongoQuery, {
         projection: {
@@ -342,6 +347,34 @@ function createProximityBounds(latitude, longitude) {
     south: Math.max(-90, latitude - latitudeSpan),
     east: normalizeLongitude(longitude + longitudeSpan),
     west: normalizeLongitude(longitude - longitudeSpan),
+  }
+}
+
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function createSearchQuery(query) {
+  const normalizedQuery = String(query || '').trim()
+  if (!normalizedQuery) return null
+
+  const regex = new RegExp(escapeRegex(normalizedQuery), 'i')
+
+  return {
+    $or: [
+      { restaurant: regex },
+      { '_id.restaurant_name': regex },
+      { address: regex },
+      { '_id.address': regex },
+      { city: regex },
+      { state: regex },
+      { cuisine_tags: regex },
+      { attribute_tags: regex },
+      { 'menu_items.name': regex },
+      { 'menu_items.desc': regex },
+      { 'menu_items.items.name': regex },
+      { 'menu_items.items.description': regex },
+    ],
   }
 }
 
