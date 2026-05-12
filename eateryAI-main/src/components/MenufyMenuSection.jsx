@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import slugify from '../utils/slugify'
 
 const PAGE_SIZE = 10
@@ -149,9 +149,6 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
   const [focusedRows, setFocusedRows] = useState([])
   const [status, setStatus] = useState('loading')
   const [error, setError] = useState('')
-  const [hasMore, setHasMore] = useState(true)
-  const [isLoadingMore, setIsLoadingMore] = useState(false)
-  const loadMoreRef = useRef(null)
 
   async function loadChunk({ append }) {
     const skip = append ? rows.length : 0
@@ -163,7 +160,6 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
     const payload = await res.json()
     const nextItems = Array.isArray(payload?.items) ? payload.items : []
     setRows(prev => (append ? [...prev, ...nextItems] : nextItems))
-    setHasMore(Boolean(payload?.hasMore))
   }
 
   useEffect(() => {
@@ -231,38 +227,6 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
       isMounted = false
     }
   }, [focusRestaurant])
-
-  useEffect(() => {
-    if (focusRestaurant || !loadMoreRef.current || !hasMore || isLoadingMore) {
-      return undefined
-    }
-
-    const observer = new IntersectionObserver(entries => {
-      if (entries[0]?.isIntersecting) {
-        void handleLoadMore()
-      }
-    }, {
-      rootMargin: '400px 0px',
-    })
-
-    observer.observe(loadMoreRef.current)
-
-    return () => {
-      observer.disconnect()
-    }
-  }, [focusRestaurant, hasMore, isLoadingMore, rows.length])
-
-  async function handleLoadMore() {
-    if (isLoadingMore || !hasMore) return
-    setIsLoadingMore(true)
-    try {
-      await loadChunk({ append: true })
-    } catch (err) {
-      setError(err?.message || 'Failed to load Menufy data.')
-    } finally {
-      setIsLoadingMore(false)
-    }
-  }
 
   const grouped = useMemo(() => {
     const byRestaurant = {}
@@ -352,20 +316,10 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
       ))}
 
       {!focusRestaurant && (
-        <div ref={loadMoreRef} className="mt-6 flex min-h-12 items-center justify-center">
-          {hasMore ? (
-            <div className={`rounded-full px-4 py-2 text-sm font-semibold ${
-              theme === 'light'
-                ? 'border border-black/10 bg-white text-black/75'
-                : 'border border-white/10 bg-[#111317] text-white/70'
-            }`}>
-              {isLoadingMore ? 'Loading more restaurants…' : 'Scroll to load more restaurants'}
-            </div>
-          ) : (
-            <span className={`text-xs ${theme === 'light' ? 'text-warmgray' : 'text-white/60'}`}>
-              All Menufy items loaded.
-            </span>
-          )}
+        <div className="mt-6 flex min-h-12 items-center justify-center">
+          <span className={`text-xs ${theme === 'light' ? 'text-warmgray' : 'text-white/60'}`}>
+            Showing the first {PAGE_SIZE} Menufy restaurants. Search or pick a restaurant to jump to a specific one.
+          </span>
         </div>
       )}
     </section>

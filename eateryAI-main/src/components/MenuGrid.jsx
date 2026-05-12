@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import slugify from '../utils/slugify'
 
 const RESTAURANT_BATCH_SIZE = 10
@@ -152,38 +152,14 @@ export default function MenuGrid({
 }) {
   const isLight = theme === 'light'
   const [visibleRestaurantCount, setVisibleRestaurantCount] = useState(RESTAURANT_BATCH_SIZE)
-  const loadMoreRef = useRef(null)
   const restaurants = groupedItems.type === 'byRestaurant'
     ? Object.entries(groupedItems.data)
     : []
   const visibleRestaurants = restaurants.slice(0, visibleRestaurantCount)
-  const hasMoreRestaurants = visibleRestaurantCount < restaurants.length
 
   useEffect(() => {
     setVisibleRestaurantCount(RESTAURANT_BATCH_SIZE)
   }, [groupedItems, selectedRestaurant])
-
-  useEffect(() => {
-    if (groupedItems.type !== 'byRestaurant' || !loadMoreRef.current || !hasMoreRestaurants) {
-      return undefined
-    }
-
-    const observer = new IntersectionObserver(entries => {
-      if (entries[0]?.isIntersecting) {
-        setVisibleRestaurantCount(current =>
-          Math.min(current + RESTAURANT_BATCH_SIZE, restaurants.length)
-        )
-      }
-    }, {
-      rootMargin: '400px 0px',
-    })
-
-    observer.observe(loadMoreRef.current)
-
-    return () => {
-      observer.disconnect()
-    }
-  }, [groupedItems.type, hasMoreRestaurants, restaurants.length])
 
   if (groupedItems.type === 'byRestaurant') {
     return (
@@ -214,18 +190,6 @@ export default function MenuGrid({
             {restaurant === afterRestaurantName ? afterRestaurantContent : null}
           </div>
         ))}
-
-        {hasMoreRestaurants && (
-          <div ref={loadMoreRef} className="flex min-h-16 items-center justify-center">
-            <div className={`rounded-full px-4 py-2 text-sm font-semibold ${
-              isLight
-                ? 'border border-black/10 bg-white text-black/75'
-                : 'border border-white/10 bg-[#111317] text-white/70'
-            }`}>
-              Scroll to load more restaurants
-            </div>
-          </div>
-        )}
       </div>
     )
   }
