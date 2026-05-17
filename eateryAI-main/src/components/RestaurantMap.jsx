@@ -637,7 +637,6 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
                   size: { width: 38, height: 48 },
                   title: restaurant.restaurant_name,
                   subtitle: restaurant.address || restaurant.phone || restaurant.hours || '',
-                  clusteringIdentifier: 'restaurants',
                 }
               )
             : new mapkit.MarkerAnnotation(
@@ -647,7 +646,6 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
                   subtitle: restaurant.address || restaurant.phone || restaurant.hours || '',
                   color: isLight ? '#111827' : '#f59e0b',
                   glyphText: createMarkerGlyph(restaurant.restaurant_name),
-                  clusteringIdentifier: 'restaurants',
                 }
               )
 
