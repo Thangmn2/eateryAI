@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import slugify from '../utils/slugify'
 
-const PAGE_SIZE = 10
+const INITIAL_RESTAURANT_COUNT = 10
+const LOAD_MORE_STEP = 5
+const MAX_RESTAURANT_COUNT = 50
+const DEFAULT_MENUFY_LOCATION = {
+  latitude: 33.7419795,
+  longitude: -117.8231586,
+}
 
 function parsePrice(value) {
   if (!value) return null
@@ -149,26 +155,65 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
   const [focusedRows, setFocusedRows] = useState([])
   const [status, setStatus] = useState('loading')
   const [error, setError] = useState('')
+  const [hasMore, setHasMore] = useState(false)
+  const [loadedRestaurantCount, setLoadedRestaurantCount] = useState(0)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [origin, setOrigin] = useState(DEFAULT_MENUFY_LOCATION)
 
-  async function loadChunk({ append }) {
-    const skip = append ? rows.length : 0
-    const url = `/api/menufy/menu-items?limit=${PAGE_SIZE}&skip=${skip}`
+  async function loadChunk({ append, limit }) {
+    const skip = append ? loadedRestaurantCount : 0
+    const params = new URLSearchParams({
+      limit: String(limit),
+      skip: String(skip),
+      user_latitude: String(origin.latitude),
+      user_longitude: String(origin.longitude),
+    })
+    const url = `/api/menufy/menu-items?${params.toString()}`
     const res = await fetch(url)
     if (!res.ok) {
       throw new Error('Menufy data request failed.')
     }
     const payload = await res.json()
     const nextItems = Array.isArray(payload?.items) ? payload.items : []
+    const returnedRestaurants = Number(payload?.returnedRestaurants) || 0
     setRows(prev => (append ? [...prev, ...nextItems] : nextItems))
+    setLoadedRestaurantCount(prev => (append ? prev + returnedRestaurants : returnedRestaurants))
+    setHasMore(Boolean(payload?.hasMore) && (append ? loadedRestaurantCount + returnedRestaurants : returnedRestaurants) < MAX_RESTAURANT_COUNT)
   }
 
   useEffect(() => {
+    if (!navigator.geolocation) {
+      return undefined
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      position => {
+        setOrigin({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        })
+      },
+      () => {},
+      { enableHighAccuracy: true, timeout: 8000 }
+    )
+
+    return undefined
+  }, [])
+
+  useEffect(() => {
+    if (focusRestaurant) {
+      return undefined
+    }
+
     let isMounted = true
 
     async function loadMenufyData() {
       try {
         setStatus('loading')
-        await loadChunk({ append: false })
+        setError('')
+        setHasMore(false)
+        setLoadedRestaurantCount(0)
+        await loadChunk({ append: false, limit: INITIAL_RESTAURANT_COUNT })
         if (isMounted) {
           setStatus('ready')
         }
@@ -185,7 +230,7 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [focusRestaurant, origin.latitude, origin.longitude])
 
   useEffect(() => {
     let isMounted = true
@@ -227,6 +272,20 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
       isMounted = false
     }
   }, [focusRestaurant])
+
+  async function handleLoadMore() {
+    try {
+      setIsLoadingMore(true)
+      await loadChunk({
+        append: true,
+        limit: Math.min(LOAD_MORE_STEP, MAX_RESTAURANT_COUNT - loadedRestaurantCount),
+      })
+    } catch (err) {
+      setError(err?.message || 'Failed to load more Menufy restaurants.')
+    } finally {
+      setIsLoadingMore(false)
+    }
+  }
 
   const grouped = useMemo(() => {
     const byRestaurant = {}
@@ -317,9 +376,29 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
 
       {!focusRestaurant && (
         <div className="mt-6 flex min-h-12 items-center justify-center">
-          <span className={`text-xs ${theme === 'light' ? 'text-warmgray' : 'text-white/60'}`}>
-            Showing the first {PAGE_SIZE} Menufy restaurants. Search or pick a restaurant to jump to a specific one.
-          </span>
+          <div className="flex flex-col items-center gap-3">
+            <span className={`text-xs ${theme === 'light' ? 'text-warmgray' : 'text-white/60'}`}>
+              Showing {loadedRestaurantCount} nearby Menufy restaurants. Search or pick a restaurant to jump to a specific one.
+            </span>
+            {hasMore && loadedRestaurantCount < MAX_RESTAURANT_COUNT ? (
+              <button
+                type="button"
+                onClick={() => void handleLoadMore()}
+                disabled={isLoadingMore}
+                className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+                  theme === 'light'
+                    ? 'bg-black text-white hover:bg-black/85 disabled:bg-black/40'
+                    : 'bg-white text-black hover:bg-white/85 disabled:bg-white/40'
+                }`}
+              >
+                {isLoadingMore ? 'Loading…' : `Show ${Math.min(LOAD_MORE_STEP, MAX_RESTAURANT_COUNT - loadedRestaurantCount)} more`}
+              </button>
+            ) : loadedRestaurantCount >= MAX_RESTAURANT_COUNT ? (
+              <span className={`text-[11px] ${theme === 'light' ? 'text-warmgray-light' : 'text-white/45'}`}>
+                Capped at the nearest {MAX_RESTAURANT_COUNT} restaurants.
+              </span>
+            ) : null}
+          </div>
         </div>
       )}
     </section>

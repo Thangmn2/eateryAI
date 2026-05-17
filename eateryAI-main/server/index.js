@@ -135,31 +135,82 @@ const server = http.createServer(async (req, res) => {
       const restaurant = url.searchParams.get('restaurant')?.trim()
       const limitParam = url.searchParams.get('limit')
       const skipParam = url.searchParams.get('skip')
-      const limit = limitParam ? Number.parseInt(limitParam, 10) : 200
+      const query = String(url.searchParams.get('query') || '').trim()
+      const userLatitude = Number.parseFloat(url.searchParams.get('user_latitude') || '')
+      const userLongitude = Number.parseFloat(url.searchParams.get('user_longitude') || '')
+      const hasUserLocation = Number.isFinite(userLatitude) && Number.isFinite(userLongitude)
+      const effectiveBounds = createProximityBounds(userLatitude, userLongitude)
+      const boundsQuery = createBoundsQuery(effectiveBounds)
+      const searchQuery = createSearchQuery(query)
+      const nearbyQuery = searchQuery && boundsQuery
+        ? { $and: [boundsQuery, searchQuery] }
+        : searchQuery || boundsQuery || {}
+      const limit = limitParam ? Number.parseInt(limitParam, 10) : 10
       const skip = skipParam ? Number.parseInt(skipParam, 10) : 0
-      const safeLimit = Number.isFinite(limit) && limit > 0 ? Math.min(limit, 500) : 200
+      const safeLimit = Number.isFinite(limit) && limit > 0 ? Math.min(limit, 50) : 10
       const safeSkip = Number.isFinite(skip) && skip > 0 ? skip : 0
 
-      const cursor = db.collection('menu_items')
-        .find(restaurant ? { restaurant } : {})
+      const docs = await db.collection('menu_items')
+        .find(restaurant ? {
+          $or: [
+            { restaurant },
+            { '_id.restaurant_name': restaurant },
+          ],
+        } : nearbyQuery)
         .project({
           _id: 1,
           restaurant: 1,
+          restaurant_url: 1,
+          address: 1,
+          city: 1,
+          state: 1,
+          cuisine_tags: 1,
+          attribute_tags: 1,
+          latitude_coordinates: 1,
+          longitude_coordinates: 1,
+          logo_img: 1,
+          location: 1,
+          menu_items: 1,
           category: 1,
           category_description: 1,
           items: 1,
         })
-        .skip(safeSkip)
-        .limit(safeLimit)
+        .toArray()
 
-      const docs = await cursor.toArray()
-      const items = docs.flatMap(mapMenuSections)
+      const selectedDocs = restaurant
+        ? docs
+        : docs
+          .map(doc => ({
+            doc,
+            restaurant: mapRestaurantDocument(doc),
+          }))
+          .filter(entry => entry.restaurant.restaurant_name)
+          .filter(entry => Number.isFinite(entry.restaurant.latitude) && Number.isFinite(entry.restaurant.longitude))
+          .filter(entry => isWithinBounds(entry.restaurant, effectiveBounds))
+          .sort((a, b) => {
+            if (hasUserLocation) {
+              return distanceSq(
+                [a.restaurant.latitude, a.restaurant.longitude],
+                [userLatitude, userLongitude]
+              ) - distanceSq(
+                [b.restaurant.latitude, b.restaurant.longitude],
+                [userLatitude, userLongitude]
+              )
+            }
+
+            return a.restaurant.restaurant_name.localeCompare(b.restaurant.restaurant_name)
+          })
+          .slice(safeSkip, safeSkip + safeLimit)
+          .map(entry => entry.doc)
+
+      const items = selectedDocs.flatMap(mapMenuSections)
       return sendJson(res, 200, {
         items,
         limit: safeLimit,
         skip: safeSkip,
         returned: items.length,
-        hasMore: docs.length === safeLimit,
+        returnedRestaurants: selectedDocs.length,
+        hasMore: restaurant ? false : docs.length > safeSkip + safeLimit,
       })
     }
 
@@ -387,6 +438,29 @@ function splitTagList(value) {
     .filter(Boolean)
 }
 
+function mapRestaurantDocument(doc) {
+  const nestedCoords = Array.isArray(doc?._id?.coords) ? doc._id.coords : null
+  const geoJsonCoords = Array.isArray(doc?.location?.coordinates) ? doc.location.coordinates : null
+  const fallbackCoords = nestedCoords || geoJsonCoords
+  const longitude = fallbackCoords?.[0] ?? doc.longitude_coordinates
+  const latitude = fallbackCoords?.[1] ?? doc.latitude_coordinates
+
+  return {
+    restaurant_name: doc.restaurant || doc?._id?.restaurant_name || '',
+    restaurant_url: doc.restaurant_url || '',
+    address: doc.address || doc?._id?.address || '',
+    city: doc.city || '',
+    state: doc.state || '',
+    latitude: Number(latitude),
+    longitude: Number(longitude),
+    logo_url: doc.logo_img || '',
+    phone: doc.phone_number || '',
+    hours: doc.restaurant_hours || '',
+    cuisine_tags: splitTagList(doc.cuisine_tags),
+    attribute_tags: splitTagList(doc.attribute_tags),
+  }
+}
+
 function mapMenuSections(doc) {
   if (Array.isArray(doc?.menu_items) && doc.menu_items.length > 0) {
     return doc.menu_items
@@ -396,7 +470,13 @@ function mapMenuSections(doc) {
         restaurant: doc.restaurant || doc?._id?.restaurant_name || '',
         category: section.name,
         category_description: section.desc || '',
-        items: section.items,
+        items: section.items.map(item => ({
+          ...item,
+          restaurant: doc.restaurant || doc?._id?.restaurant_name || '',
+          category: section.name,
+          address: doc.address || doc?._id?.address || '',
+          menu_url: doc.restaurant_url || '',
+        })),
       }))
   }
 
@@ -406,7 +486,13 @@ function mapMenuSections(doc) {
       restaurant: doc.restaurant || doc?._id?.restaurant_name || '',
       category: doc.category,
       category_description: doc.category_description || '',
-      items: doc.items,
+      items: doc.items.map(item => ({
+        ...item,
+        restaurant: doc.restaurant || doc?._id?.restaurant_name || '',
+        category: doc.category,
+        address: doc.address || doc?._id?.address || '',
+        menu_url: doc.restaurant_url || '',
+      })),
     }]
   }
 
