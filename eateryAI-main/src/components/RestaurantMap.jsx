@@ -3,7 +3,7 @@ import slugify from '../utils/slugify'
 
 const DEFAULT_CENTER = [33.7419795, -117.8231586]
 const DEFAULT_ZOOM = 13
-const MAX_MARKERS = 50
+const MAX_MARKERS = 25
 const SEARCH_AREA_RADIUS_MILES = 10
 const APPLE_MAPS_CDN = 'https://cdn.apple-mapkit.com/mk/5.x.x/mapkit.js'
 const SHOW_APPLE_POINTS_OF_INTEREST = false
@@ -569,11 +569,10 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
       async function loadRestaurantsIntoAppleMap() {
         try {
           const region = map.region
-          const nextLocation = userLocationRef.current
           const activeQuery = searchQueryRef.current
           restaurantsRef.current = await fetchRestaurantsForViewport({
-            latitude: nextLocation?.[0] ?? region?.center?.latitude,
-            longitude: nextLocation?.[1] ?? region?.center?.longitude,
+            latitude: region?.center?.latitude ?? userLocationRef.current?.[0],
+            longitude: region?.center?.longitude ?? userLocationRef.current?.[1],
             bounds: getRegionBounds(region),
             query: activeQuery || undefined,
           })
@@ -860,11 +859,10 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
       async function loadRestaurantsIntoLeafletMap() {
         try {
           const mapBounds = map.getBounds()
-          const nextLocation = userLocationRef.current
           const activeQuery = searchQueryRef.current
           restaurantsRef.current = await fetchRestaurantsForViewport({
-            latitude: nextLocation?.[0] ?? map.getCenter().lat,
-            longitude: nextLocation?.[1] ?? map.getCenter().lng,
+            latitude: map.getCenter().lat,
+            longitude: map.getCenter().lng,
             bounds: {
               north: mapBounds.getNorth(),
               south: mapBounds.getSouth(),
@@ -1153,7 +1151,7 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
         </div>
       )}
       {searchAreaPending && (
-        <div className="absolute left-1/2 top-[10.5rem] z-[2200] -translate-x-1/2">
+        <div className="absolute bottom-28 left-1/2 z-[2200] -translate-x-1/2">
           <button
             type="button"
             onClick={() => executeSearchInCurrentArea(searchQuery)}
