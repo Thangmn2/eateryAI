@@ -357,8 +357,29 @@ export default function MenuGrid({
   )
 
   useEffect(() => {
+    if (groupedItems.type !== 'byRestaurant') {
+      setVisibleRestaurantCount(RESTAURANT_BATCH_SIZE)
+      return
+    }
+
+    if (focusRestaurant) {
+      const focusedIndex = restaurants.findIndex(([restaurant]) => restaurant === focusRestaurant)
+      if (focusedIndex >= 0) {
+        setVisibleRestaurantCount(Math.max(RESTAURANT_BATCH_SIZE, focusedIndex + 1))
+        return
+      }
+    }
+
+    if (selectedRestaurant && selectedRestaurant !== 'All') {
+      const selectedIndex = restaurants.findIndex(([restaurant]) => restaurant === selectedRestaurant)
+      if (selectedIndex >= 0) {
+        setVisibleRestaurantCount(Math.max(RESTAURANT_BATCH_SIZE, selectedIndex + 1))
+        return
+      }
+    }
+
     setVisibleRestaurantCount(RESTAURANT_BATCH_SIZE)
-  }, [groupedItems, selectedRestaurant])
+  }, [focusRestaurant, groupedItems, restaurants, selectedRestaurant])
 
   useEffect(() => {
     if (groupedItems.type !== 'byRestaurant') {

@@ -437,7 +437,14 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
       }
 
       try {
-        const res = await fetch(`/api/menufy/menu-items?restaurant=${encodeURIComponent(focusRestaurant)}&limit=200`)
+        setStatus('loading')
+        setError('')
+
+        const params = new URLSearchParams({
+          restaurant: focusRestaurant,
+          limit: '200',
+        })
+        const res = await fetch(`/api/menufy/menu-items?${params.toString()}`)
         if (!res.ok) {
           throw new Error('Focused Menufy restaurant request failed.')
         }
@@ -445,6 +452,7 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
         const nextItems = Array.isArray(payload?.items) ? payload.items : []
         if (isMounted) {
           setFocusedRows(nextItems)
+          setStatus('ready')
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
               document.getElementById(`menufy-restaurant-${slugify(focusRestaurant)}`)?.scrollIntoView({
@@ -454,9 +462,11 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
             })
           })
         }
-      } catch {
+      } catch (err) {
         if (isMounted) {
           setFocusedRows([])
+          setError(err?.message || 'Focused Menufy restaurant request failed.')
+          setStatus('error')
         }
       }
     }
