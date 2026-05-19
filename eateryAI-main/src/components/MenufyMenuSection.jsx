@@ -234,7 +234,7 @@ function MenufyRestaurantCard({
 
     return {
       tags: mongoTags.length > 0 ? mongoTags : fallback.tags,
-      previewText: fallback.previewText,
+      previewText: metadata?.description?.trim() || fallback.previewText,
     }
   }, [categories, metadata])
   const [activePhotoIndex, setActivePhotoIndex] = useState(0)
@@ -342,7 +342,7 @@ function MenufyRestaurantCard({
   )
 }
 
-export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart = [] }) {
+export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart = [], allowedRestaurantNames = [] }) {
   const [rows, setRows] = useState([])
   const [focusedRows, setFocusedRows] = useState([])
   const [status, setStatus] = useState('loading')
@@ -362,6 +362,7 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
       user_latitude: String(origin.latitude),
       user_longitude: String(origin.longitude),
     })
+    allowedRestaurantNames.forEach(name => params.append('name', name))
     const url = `/api/menufy/menu-items?${params.toString()}`
     const res = await fetch(url)
     if (!res.ok) {
@@ -424,7 +425,7 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
     return () => {
       isMounted = false
     }
-  }, [focusRestaurant, origin.latitude, origin.longitude])
+  }, [allowedRestaurantNames, focusRestaurant, origin.latitude, origin.longitude])
 
   useEffect(() => {
     let isMounted = true

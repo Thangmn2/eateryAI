@@ -479,7 +479,7 @@ function loadMapKit(token) {
   return window.__eateryMapKitPromise
 }
 
-export default function RestaurantMap({ theme, sidebar = false, onRestaurantClick, onOpenMenu }) {
+export default function RestaurantMap({ theme, sidebar = false, onRestaurantClick, onOpenMenu, onVisibleRestaurantsChange }) {
   const isLight = theme === 'light'
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
@@ -493,6 +493,7 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
   const refreshViewportRef = useRef(() => {})
   const reloadRestaurantsRef = useRef(() => {})
   const onRestaurantClickRef = useRef(onRestaurantClick)
+  const onVisibleRestaurantsChangeRef = useRef(onVisibleRestaurantsChange)
   const suppressViewportRefreshRef = useRef(false)
   const searchQueryRef = useRef('')
   const selectedCuisineTagsRef = useRef([])
@@ -532,6 +533,10 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
   useEffect(() => {
     onRestaurantClickRef.current = onRestaurantClick
   }, [onRestaurantClick])
+
+  useEffect(() => {
+    onVisibleRestaurantsChangeRef.current = onVisibleRestaurantsChange
+  }, [onVisibleRestaurantsChange])
 
   useEffect(() => {
     searchQueryRef.current = normalizeSearchValue(searchQuery)
@@ -605,6 +610,7 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
 
         setTotalInView(candidates.length)
         setVisibleCount(visible.length)
+        onVisibleRestaurantsChangeRef.current?.(visible)
 
         if (appleAnnotationsRef.current.length > 0) {
           map.removeAnnotations(appleAnnotationsRef.current)
@@ -800,6 +806,7 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
         )
 
         setTotalInView(candidates.length)
+        onVisibleRestaurantsChangeRef.current?.(visible)
 
         if (candidates.length === 0 && filteredRestaurants.length > 0) {
           setNoNearby(true)

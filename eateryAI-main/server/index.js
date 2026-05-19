@@ -184,6 +184,9 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && url.pathname === '/api/menufy/menu-items') {
       const db = await getMongoDb()
       const restaurant = url.searchParams.get('restaurant')?.trim()
+      const names = url.searchParams.getAll('name')
+        .map(value => String(value || '').trim())
+        .filter(Boolean)
       const limitParam = url.searchParams.get('limit')
       const skipParam = url.searchParams.get('skip')
       const query = String(url.searchParams.get('query') || '').trim()
@@ -206,6 +209,11 @@ const server = http.createServer(async (req, res) => {
           $or: [
             { restaurant },
             { '_id.restaurant_name': restaurant },
+          ],
+        } : names.length > 0 ? {
+          $or: [
+            { restaurant: { $in: names } },
+            { '_id.restaurant_name': { $in: names } },
           ],
         } : nearbyQuery)
         .project({
@@ -239,6 +247,10 @@ const server = http.createServer(async (req, res) => {
           .filter(entry => Number.isFinite(entry.restaurant.latitude) && Number.isFinite(entry.restaurant.longitude))
           .filter(entry => isWithinBounds(entry.restaurant, effectiveBounds))
           .sort((a, b) => {
+            if (names.length > 0) {
+              return names.indexOf(a.restaurant.restaurant_name) - names.indexOf(b.restaurant.restaurant_name)
+            }
+
             if (hasUserLocation) {
               return distanceSq(
                 [a.restaurant.latitude, a.restaurant.longitude],

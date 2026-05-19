@@ -166,6 +166,11 @@ export default withErrorHandling(async function handler(req, res) {
   }
 
   const restaurant = req.query.restaurant?.trim()
+  const names = Array.isArray(req.query.name)
+    ? req.query.name.map(value => String(value || '').trim()).filter(Boolean)
+    : typeof req.query.name === 'string'
+      ? [req.query.name.trim()].filter(Boolean)
+      : []
   const limit = parsePositiveInt(req.query.limit, 10, 50)
   const skip = parseNonNegativeInt(req.query.skip, 0)
   const query = String(req.query.query || '').trim()
@@ -185,6 +190,11 @@ export default withErrorHandling(async function handler(req, res) {
       $or: [
         { restaurant },
         { '_id.restaurant_name': restaurant },
+      ],
+    } : names.length > 0 ? {
+      $or: [
+        { restaurant: { $in: names } },
+        { '_id.restaurant_name': { $in: names } },
       ],
     } : nearbyQuery)
     .project({
@@ -218,6 +228,10 @@ export default withErrorHandling(async function handler(req, res) {
       .filter(entry => Number.isFinite(entry.restaurant.latitude) && Number.isFinite(entry.restaurant.longitude))
       .filter(entry => isWithinBounds(entry.restaurant, effectiveBounds))
       .sort((a, b) => {
+        if (names.length > 0) {
+          return names.indexOf(a.restaurant.restaurant_name) - names.indexOf(b.restaurant.restaurant_name)
+        }
+
         if (hasUserLocation) {
           return distanceSq(
             [a.restaurant.latitude, a.restaurant.longitude],

@@ -36,6 +36,7 @@ export default function App() {
   const [selectedRestaurant, setSelectedRestaurant] = useState('All')
   const [focusedMenufyRestaurant, setFocusedMenufyRestaurant] = useState('')
   const [focusedHomepageRestaurant, setFocusedHomepageRestaurant] = useState('')
+  const [visibleMapRestaurants, setVisibleMapRestaurants] = useState([])
   const [selectedItem, setSelectedItem] = useState(null)
   const [cart, setCart] = useState([])
   const [showCart, setShowCart] = useState(false)
@@ -54,33 +55,62 @@ export default function App() {
   const restaurants = useMemo(() => {
     return [...new Set([...menuJson.menuItems.map(item => item.Restaurant), ...scannedMenuItems.map(item => item.Restaurant)])].sort()
   }, [scannedMenuItems])
+  const visibleMapRestaurantSet = useMemo(
+    () => new Set(visibleMapRestaurants.map(restaurant => restaurant.restaurant_name).filter(Boolean)),
+    [visibleMapRestaurants]
+  )
+  const hasMapScopedRestaurants = visibleMapRestaurantSet.size > 0
+  const homepageRestaurants = useMemo(() => {
+    if (selectedRestaurant !== 'All' || !hasMapScopedRestaurants) {
+      return restaurants
+    }
+
+    return restaurants.filter(name => visibleMapRestaurantSet.has(name))
+  }, [hasMapScopedRestaurants, restaurants, selectedRestaurant, visibleMapRestaurantSet])
+  const visibleMapRestaurantNames = useMemo(
+    () => visibleMapRestaurants.map(restaurant => restaurant.restaurant_name).filter(Boolean),
+    [visibleMapRestaurants]
+  )
 
   const restaurantCounts = useMemo(() => {
-    return [...confirmedItems, ...unconfirmedItems, ...scannedMenuItems].reduce((counts, item) => {
+    const baseCounts = [...confirmedItems, ...unconfirmedItems, ...scannedMenuItems].reduce((counts, item) => {
       counts[item.Restaurant] = (counts[item.Restaurant] || 0) + 1
       return counts
     }, {})
-  }, [scannedMenuItems])
+    if (selectedRestaurant !== 'All' || !hasMapScopedRestaurants) {
+      return baseCounts
+    }
+
+    return Object.fromEntries(
+      Object.entries(baseCounts).filter(([name]) => visibleMapRestaurantSet.has(name))
+    )
+  }, [hasMapScopedRestaurants, scannedMenuItems, selectedRestaurant, visibleMapRestaurantSet])
 
   const filteredConfirmed = useMemo(() => {
     return selectedRestaurant === 'All'
-      ? confirmedItems
+      ? (hasMapScopedRestaurants
+          ? confirmedItems.filter(item => visibleMapRestaurantSet.has(item.Restaurant))
+          : confirmedItems)
       : confirmedItems.filter(i => i.Restaurant === selectedRestaurant)
-  }, [selectedRestaurant])
+  }, [hasMapScopedRestaurants, selectedRestaurant, visibleMapRestaurantSet])
 
   const filteredScannedItems = useMemo(() => {
     return selectedRestaurant === 'All'
-      ? scannedMenuItems
+      ? (hasMapScopedRestaurants
+          ? scannedMenuItems.filter(item => visibleMapRestaurantSet.has(item.Restaurant))
+          : scannedMenuItems)
       : scannedMenuItems.filter(item => item.Restaurant === selectedRestaurant)
-  }, [scannedMenuItems, selectedRestaurant])
+  }, [hasMapScopedRestaurants, scannedMenuItems, selectedRestaurant, visibleMapRestaurantSet])
 
   const filteredUnconfirmed = useMemo(() => {
     const baseUnconfirmed = selectedRestaurant === 'All'
-      ? unconfirmedItems
+      ? (hasMapScopedRestaurants
+          ? unconfirmedItems.filter(item => visibleMapRestaurantSet.has(item.Restaurant))
+          : unconfirmedItems)
       : unconfirmedItems.filter(i => i.Restaurant === selectedRestaurant)
 
     return [...filteredScannedItems, ...baseUnconfirmed]
-  }, [filteredScannedItems, selectedRestaurant])
+  }, [filteredScannedItems, hasMapScopedRestaurants, selectedRestaurant, visibleMapRestaurantSet])
 
   function groupItems(items) {
     if (selectedRestaurant === 'All') {
@@ -300,6 +330,7 @@ export default function App() {
               theme={theme}
               onRestaurantClick={handleRestaurantSelect}
               onOpenMenu={() => setShowMap(false)}
+              onVisibleRestaurantsChange={setVisibleMapRestaurants}
             />
           )}
 
@@ -325,7 +356,7 @@ export default function App() {
             </div>
 
             <RestaurantFilter
-              restaurants={restaurants}
+              restaurants={homepageRestaurants}
               selected={selectedRestaurant}
               onSelect={value => {
                 setSelectedRestaurant(value)
@@ -344,6 +375,7 @@ export default function App() {
                       focusRestaurant={focusedMenufyRestaurant}
                       onAdd={addToCart}
                       cart={cart}
+                      allowedRestaurantNames={selectedRestaurant === 'All' ? visibleMapRestaurantNames : []}
                     />
                   ) : (
                     <LazyRender
@@ -365,11 +397,14 @@ export default function App() {
                         focusRestaurant={focusedMenufyRestaurant}
                         onAdd={addToCart}
                         cart={cart}
+                        allowedRestaurantNames={selectedRestaurant === 'All' ? visibleMapRestaurantNames : []}
                       />
                     </LazyRender>
                   )}
             <p className={`mb-6 -mt-2 text-sm ${isLight ? 'text-warmgray-dark' : 'text-white/80'}`}>
-              {totalItemCount} items across {restaurants.length} restaurants
+              {selectedRestaurant === 'All' && hasMapScopedRestaurants
+                ? `${filteredConfirmed.length + filteredUnconfirmed.length} items across ${homepageRestaurants.length} restaurants in this map area`
+                : `${totalItemCount} items across ${restaurants.length} restaurants`}
             </p>
 
               <MenuGrid

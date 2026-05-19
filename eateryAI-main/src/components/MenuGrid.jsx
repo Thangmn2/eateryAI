@@ -225,7 +225,7 @@ function RestaurantSummaryCard({
 
     return {
       tags: mongoTags.length > 0 ? mongoTags : fallback.tags,
-      previewText: fallback.previewText,
+      previewText: metadata?.description?.trim() || fallback.previewText,
     }
   }, [categories, metadata])
   const [activePhotoIndex, setActivePhotoIndex] = useState(0)
