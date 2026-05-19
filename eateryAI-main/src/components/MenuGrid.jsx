@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import slugify from '../utils/slugify'
 
 const RESTAURANT_BATCH_SIZE = 10
@@ -141,6 +141,53 @@ function CategorySection({ title, items, onItemClick, cart, theme }) {
   )
 }
 
+function RestaurantSummaryCard({
+  restaurant,
+  categories,
+  expanded,
+  onToggle,
+  theme,
+  children,
+}) {
+  const isLight = theme === 'light'
+  const categoryEntries = Object.entries(categories)
+  const itemCount = categoryEntries.reduce((sum, [, items]) => sum + items.length, 0)
+  const categoryCount = categoryEntries.length
+
+  return (
+    <div className={`mb-6 overflow-hidden rounded-[28px] border ${isLight ? 'border-black/10 bg-white' : 'border-white/10 bg-[#0f1115]'}`}>
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between gap-4 px-5 py-5 text-left sm:px-6"
+      >
+        <div className="min-w-0">
+          <h2 className={`font-display text-xl font-bold sm:text-2xl ${isLight ? 'text-gray-900' : 'text-white'}`}>
+            {restaurant}
+          </h2>
+          <p className={`mt-1 text-sm ${isLight ? 'text-warmgray-dark' : 'text-white/65'}`}>
+            {itemCount} items across {categoryCount} categories
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${isLight ? 'bg-black/5 text-warmgray-dark' : 'bg-white/10 text-white/70'}`}>
+            {expanded ? 'Hide menu' : 'View menu'}
+          </span>
+          <span className={`text-lg transition-transform ${expanded ? 'rotate-180' : ''} ${isLight ? 'text-gray-900' : 'text-white'}`}>
+            ⌄
+          </span>
+        </div>
+      </button>
+
+      {expanded ? (
+        <div className={`border-t px-5 pb-5 pt-4 sm:px-6 sm:pb-6 ${isLight ? 'border-black/10' : 'border-white/10'}`}>
+          {children}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 export default function MenuGrid({
   groupedItems,
   onItemClick,
@@ -149,17 +196,50 @@ export default function MenuGrid({
   afterRestaurantName,
   afterRestaurantContent,
   selectedRestaurant,
+  focusRestaurant,
 }) {
   const isLight = theme === 'light'
   const [visibleRestaurantCount, setVisibleRestaurantCount] = useState(RESTAURANT_BATCH_SIZE)
+  const [expandedRestaurants, setExpandedRestaurants] = useState([])
   const restaurants = groupedItems.type === 'byRestaurant'
     ? Object.entries(groupedItems.data)
     : []
   const visibleRestaurants = restaurants.slice(0, visibleRestaurantCount)
+  const expandedRestaurantSet = useMemo(
+    () => new Set(expandedRestaurants),
+    [expandedRestaurants]
+  )
 
   useEffect(() => {
     setVisibleRestaurantCount(RESTAURANT_BATCH_SIZE)
   }, [groupedItems, selectedRestaurant])
+
+  useEffect(() => {
+    if (groupedItems.type !== 'byRestaurant') {
+      setExpandedRestaurants([])
+      return
+    }
+
+    if (focusRestaurant) {
+      setExpandedRestaurants([focusRestaurant])
+      return
+    }
+
+    if (selectedRestaurant && selectedRestaurant !== 'All') {
+      setExpandedRestaurants([selectedRestaurant])
+      return
+    }
+
+    setExpandedRestaurants([])
+  }, [focusRestaurant, groupedItems.type, selectedRestaurant])
+
+  function toggleRestaurant(restaurant) {
+    setExpandedRestaurants(current => (
+      current.includes(restaurant)
+        ? current.filter(name => name !== restaurant)
+        : [...current, restaurant]
+    ))
+  }
 
   if (groupedItems.type === 'byRestaurant') {
     return (
@@ -170,24 +250,26 @@ export default function MenuGrid({
             id={`restaurant-${slugify(restaurant)}`}
             className="mb-10 scroll-mt-24"
           >
-            <div className={`flex items-center gap-3 mb-4 pb-2 border-b ${isLight ? 'border-black/10' : 'border-cream'}`}>
-              <h2 className={`font-display text-xl sm:text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
-                {restaurant}
-              </h2>
-            </div>
+            <RestaurantSummaryCard
+              restaurant={restaurant}
+              categories={categories}
+              expanded={expandedRestaurantSet.has(restaurant)}
+              onToggle={() => toggleRestaurant(restaurant)}
+              theme={theme}
+            >
+              {Object.entries(categories).map(([category, items]) => (
+                <CategorySection
+                  key={category}
+                  title={category}
+                  items={items}
+                  onItemClick={onItemClick}
+                  cart={cart}
+                  theme={theme}
+                />
+              ))}
 
-            {Object.entries(categories).map(([category, items]) => (
-              <CategorySection
-                key={category}
-                title={category}
-                items={items}
-                onItemClick={onItemClick}
-                cart={cart}
-                theme={theme}
-              />
-            ))}
-
-            {restaurant === afterRestaurantName ? afterRestaurantContent : null}
+              {restaurant === afterRestaurantName ? afterRestaurantContent : null}
+            </RestaurantSummaryCard>
           </div>
         ))}
       </div>

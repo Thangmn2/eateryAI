@@ -35,6 +35,7 @@ export default function App() {
   const [showMap, setShowMap] = useState(true)
   const [selectedRestaurant, setSelectedRestaurant] = useState('All')
   const [focusedMenufyRestaurant, setFocusedMenufyRestaurant] = useState('')
+  const [focusedHomepageRestaurant, setFocusedHomepageRestaurant] = useState('')
   const [selectedItem, setSelectedItem] = useState(null)
   const [cart, setCart] = useState([])
   const [showCart, setShowCart] = useState(false)
@@ -154,8 +155,11 @@ export default function App() {
 
   function handleRestaurantSelect(name) {
     const restaurantSlug = slugify(name)
-    setFocusedMenufyRestaurant(name)
-    setSelectedRestaurant(restaurants.includes(name) ? name : 'All')
+    const isLocalRestaurant = restaurants.includes(name)
+
+    setSelectedRestaurant('All')
+    setFocusedHomepageRestaurant(isLocalRestaurant ? name : '')
+    setFocusedMenufyRestaurant(isLocalRestaurant ? '' : name)
     requestAnimationFrame(() => {
       const target = document.getElementById('menu-content')
       target?.scrollIntoView({ top: 0, behavior: 'smooth' })
@@ -246,7 +250,8 @@ export default function App() {
       )
 
       if (matchedRestaurant) {
-        setSelectedRestaurant(matchedRestaurant)
+        setSelectedRestaurant('All')
+        setFocusedHomepageRestaurant(matchedRestaurant)
         setFocusedMenufyRestaurant('')
 
         requestAnimationFrame(() => {
@@ -321,6 +326,7 @@ export default function App() {
               selected={selectedRestaurant}
               onSelect={value => {
                 setSelectedRestaurant(value)
+                setFocusedHomepageRestaurant('')
                 setFocusedMenufyRestaurant('')
               }}
               counts={restaurantCounts}
@@ -369,6 +375,7 @@ export default function App() {
                 cart={cart}
                 theme={theme}
                 selectedRestaurant={selectedRestaurant}
+                focusRestaurant={focusedHomepageRestaurant}
                 afterRestaurantName={selectedRestaurant === 'All' ? 'J Sushi Orange' : undefined}
                 afterRestaurantContent={selectedRestaurant === 'All' ? (
                   <ChipotleBuilder

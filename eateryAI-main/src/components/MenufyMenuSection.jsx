@@ -150,6 +150,55 @@ function CategorySection({ title, description, items, theme, onAdd, cart }) {
   )
 }
 
+function MenufyRestaurantCard({
+  restaurant,
+  categories,
+  expanded,
+  onToggle,
+  theme,
+  children,
+}) {
+  const isLight = theme === 'light'
+  const categoryEntries = Object.entries(categories)
+  const itemCount = categoryEntries.reduce(
+    (sum, [, payload]) => sum + (Array.isArray(payload.items) ? payload.items.length : 0),
+    0
+  )
+
+  return (
+    <div className={`mb-6 overflow-hidden rounded-[28px] border ${isLight ? 'border-black/10 bg-white' : 'border-white/10 bg-[#0f1115]'}`}>
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between gap-4 px-5 py-5 text-left sm:px-6"
+      >
+        <div className="min-w-0">
+          <h3 className={`font-display text-xl font-bold sm:text-2xl ${isLight ? 'text-gray-900' : 'text-white'}`}>
+            {restaurant}
+          </h3>
+          <p className={`mt-1 text-sm ${isLight ? 'text-warmgray-dark' : 'text-white/65'}`}>
+            {itemCount} items across {categoryEntries.length} categories
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${isLight ? 'bg-black/5 text-warmgray-dark' : 'bg-white/10 text-white/70'}`}>
+            {expanded ? 'Hide menu' : 'View menu'}
+          </span>
+          <span className={`text-lg transition-transform ${expanded ? 'rotate-180' : ''} ${isLight ? 'text-gray-900' : 'text-white'}`}>
+            ⌄
+          </span>
+        </div>
+      </button>
+
+      {expanded ? (
+        <div className={`border-t px-5 pb-5 pt-4 sm:px-6 sm:pb-6 ${isLight ? 'border-black/10' : 'border-white/10'}`}>
+          {children}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart = [] }) {
   const [rows, setRows] = useState([])
   const [focusedRows, setFocusedRows] = useState([])
@@ -159,6 +208,7 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
   const [loadedRestaurantCount, setLoadedRestaurantCount] = useState(0)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [origin, setOrigin] = useState(DEFAULT_MENUFY_LOCATION)
+  const [expandedRestaurants, setExpandedRestaurants] = useState([])
 
   async function loadChunk({ append, limit }) {
     const skip = append ? loadedRestaurantCount : 0
@@ -273,6 +323,15 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
     }
   }, [focusRestaurant])
 
+  useEffect(() => {
+    if (focusRestaurant) {
+      setExpandedRestaurants([focusRestaurant])
+      return
+    }
+
+    setExpandedRestaurants([])
+  }, [focusRestaurant])
+
   async function handleLoadMore() {
     try {
       setIsLoadingMore(true)
@@ -351,26 +410,37 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
 
       {restaurants.map(([restaurant, categories]) => (
         <div key={restaurant} id={`menufy-restaurant-${slugify(restaurant)}`} className="mb-12 scroll-mt-24">
-          <div className={`flex items-center gap-3 mb-4 pb-2 border-b ${theme === 'light' ? 'border-black/10' : 'border-cream'}`}>
-            <h3 className={`font-display text-xl sm:text-2xl font-bold ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
-              {restaurant}
-            </h3>
-            <span className={`text-xs ${theme === 'light' ? 'text-warmgray-light' : 'text-white/60'}`}>
-              No nutrition data
-            </span>
-          </div>
+          <MenufyRestaurantCard
+            restaurant={restaurant}
+            categories={categories}
+            expanded={expandedRestaurants.includes(restaurant)}
+            onToggle={() => {
+              setExpandedRestaurants(current => (
+                current.includes(restaurant)
+                  ? current.filter(name => name !== restaurant)
+                  : [...current, restaurant]
+              ))
+            }}
+            theme={theme}
+          >
+            <div className="mb-4">
+              <span className={`text-xs ${theme === 'light' ? 'text-warmgray-light' : 'text-white/60'}`}>
+                No nutrition data
+              </span>
+            </div>
 
-          {Object.entries(categories).map(([category, payload]) => (
-            <CategorySection
-              key={`${restaurant}-${category}`}
-              title={category}
-              description={payload.description}
-              items={payload.items}
-              theme={theme}
-              onAdd={onAdd}
-              cart={cart}
-            />
-          ))}
+            {Object.entries(categories).map(([category, payload]) => (
+              <CategorySection
+                key={`${restaurant}-${category}`}
+                title={category}
+                description={payload.description}
+                items={payload.items}
+                theme={theme}
+                onAdd={onAdd}
+                cart={cart}
+              />
+            ))}
+          </MenufyRestaurantCard>
         </div>
       ))}
 
