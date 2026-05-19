@@ -181,9 +181,32 @@ function buildRestaurantHighlights(categories) {
   }
 }
 
+async function fetchRestaurantMetadata(names) {
+  if (!Array.isArray(names) || names.length === 0) {
+    return {}
+  }
+
+  const params = new URLSearchParams()
+  names.forEach(name => params.append('name', name))
+  const response = await fetch(`/api/restaurants/meta?${params.toString()}`)
+  if (!response.ok) {
+    throw new Error('Restaurant metadata request failed.')
+  }
+
+  const payload = await response.json()
+  const rows = Array.isArray(payload?.restaurants) ? payload.restaurants : []
+  return rows.reduce((acc, row) => {
+    if (row?.restaurant_name) {
+      acc[row.restaurant_name] = row
+    }
+    return acc
+  }, {})
+}
+
 function RestaurantSummaryCard({
   restaurant,
   categories,
+  metadata,
   expanded,
   onToggle,
   theme,
@@ -194,7 +217,17 @@ function RestaurantSummaryCard({
   const itemCount = categoryEntries.reduce((sum, [, items]) => sum + items.length, 0)
   const categoryCount = categoryEntries.length
   const gallery = useMemo(() => collectRestaurantGallery(categories), [categories])
-  const { tags, previewText } = useMemo(() => buildRestaurantHighlights(categories), [categories])
+  const { tags, previewText } = useMemo(() => {
+    const fallback = buildRestaurantHighlights(categories)
+    const mongoTags = [...(metadata?.cuisine_tags || []), ...(metadata?.attribute_tags || [])]
+      .filter(Boolean)
+      .slice(0, 5)
+
+    return {
+      tags: mongoTags.length > 0 ? mongoTags : fallback.tags,
+      previewText: fallback.previewText,
+    }
+  }, [categories, metadata])
   const [activePhotoIndex, setActivePhotoIndex] = useState(0)
   const activePhoto = gallery[activePhotoIndex] || null
 
@@ -313,6 +346,7 @@ export default function MenuGrid({
   const isLight = theme === 'light'
   const [visibleRestaurantCount, setVisibleRestaurantCount] = useState(RESTAURANT_BATCH_SIZE)
   const [expandedRestaurants, setExpandedRestaurants] = useState([])
+  const [restaurantMetadata, setRestaurantMetadata] = useState({})
   const restaurants = groupedItems.type === 'byRestaurant'
     ? Object.entries(groupedItems.data)
     : []
@@ -345,6 +379,35 @@ export default function MenuGrid({
     setExpandedRestaurants([])
   }, [focusRestaurant, groupedItems.type, selectedRestaurant])
 
+  useEffect(() => {
+    if (groupedItems.type !== 'byRestaurant') {
+      setRestaurantMetadata({})
+      return
+    }
+
+    let ignore = false
+    const names = visibleRestaurants.map(([restaurant]) => restaurant)
+
+    async function loadMetadata() {
+      try {
+        const nextMetadata = await fetchRestaurantMetadata(names)
+        if (!ignore) {
+          setRestaurantMetadata(nextMetadata)
+        }
+      } catch {
+        if (!ignore) {
+          setRestaurantMetadata({})
+        }
+      }
+    }
+
+    void loadMetadata()
+
+    return () => {
+      ignore = true
+    }
+  }, [groupedItems.type, visibleRestaurants])
+
   function toggleRestaurant(restaurant) {
     setExpandedRestaurants(current => (
       current.includes(restaurant)
@@ -365,6 +428,7 @@ export default function MenuGrid({
             <RestaurantSummaryCard
               restaurant={restaurant}
               categories={categories}
+              metadata={restaurantMetadata[restaurant]}
               expanded={expandedRestaurantSet.has(restaurant)}
               onToggle={() => toggleRestaurant(restaurant)}
               theme={theme}

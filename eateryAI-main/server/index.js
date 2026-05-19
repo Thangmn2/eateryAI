@@ -130,6 +130,57 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, payload)
     }
 
+    if (req.method === 'GET' && url.pathname === '/api/restaurants/meta') {
+      const names = url.searchParams.getAll('name')
+        .map(value => String(value || '').trim())
+        .filter(Boolean)
+
+      if (names.length === 0) {
+        return sendJson(res, 200, { restaurants: [] })
+      }
+
+      const uniqueNames = [...new Set(names)].slice(0, 100)
+      const db = await getMongoDb()
+      const docs = await db.collection('menu_items').find({
+        $or: [
+          { restaurant: { $in: uniqueNames } },
+          { '_id.restaurant_name': { $in: uniqueNames } },
+        ],
+      }, {
+        projection: {
+          _id: 1,
+          restaurant: 1,
+          city: 1,
+          state: 1,
+          cuisine_tags: 1,
+          attribute_tags: 1,
+          restaurant_rating: 1,
+          restaurant_review_count: 1,
+          restaurant_description: 1,
+          header_img: 1,
+          logo_img: 1,
+        },
+      }).toArray()
+
+      return sendJson(res, 200, {
+        restaurants: docs.map(doc => {
+          const mapped = mapRestaurantDocument(doc)
+          return {
+            restaurant_name: mapped.restaurant_name,
+            city: mapped.city,
+            state: mapped.state,
+            cuisine_tags: mapped.cuisine_tags,
+            attribute_tags: mapped.attribute_tags,
+            rating: doc.restaurant_rating || '',
+            review_count: doc.restaurant_review_count || '',
+            description: doc.restaurant_description || '',
+            header_img: doc.header_img || '',
+            logo_url: doc.logo_img || '',
+          }
+        }),
+      })
+    }
+
     if (req.method === 'GET' && url.pathname === '/api/menufy/menu-items') {
       const db = await getMongoDb()
       const restaurant = url.searchParams.get('restaurant')?.trim()

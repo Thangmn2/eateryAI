@@ -157,16 +157,18 @@ export default function App() {
     const restaurantSlug = slugify(name)
     const isLocalRestaurant = restaurants.includes(name)
 
-    setShowMap(false)
     setSelectedRestaurant('All')
     setFocusedHomepageRestaurant(isLocalRestaurant ? name : '')
     setFocusedMenufyRestaurant(isLocalRestaurant ? '' : name)
     requestAnimationFrame(() => {
       const target = document.getElementById('menu-content')
-      target?.scrollIntoView({ top: 0, behavior: 'auto' })
+      target?.scrollIntoView({ top: 0, behavior: 'smooth' })
       requestAnimationFrame(() => {
-        document.getElementById(`restaurant-${restaurantSlug}`)?.scrollIntoView({
-          behavior: 'auto',
+        const homeTarget = document.getElementById(`restaurant-${restaurantSlug}`)
+        const menufyTarget = document.getElementById(`menufy-restaurant-${restaurantSlug}`)
+
+        ;(homeTarget || menufyTarget)?.scrollIntoView({
+          behavior: 'smooth',
           block: 'start',
         })
       })

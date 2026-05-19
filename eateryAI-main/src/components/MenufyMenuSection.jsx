@@ -188,9 +188,32 @@ function buildRestaurantHighlights(categories) {
   }
 }
 
+async function fetchRestaurantMetadata(names) {
+  if (!Array.isArray(names) || names.length === 0) {
+    return {}
+  }
+
+  const params = new URLSearchParams()
+  names.forEach(name => params.append('name', name))
+  const response = await fetch(`/api/restaurants/meta?${params.toString()}`)
+  if (!response.ok) {
+    throw new Error('Restaurant metadata request failed.')
+  }
+
+  const payload = await response.json()
+  const rows = Array.isArray(payload?.restaurants) ? payload.restaurants : []
+  return rows.reduce((acc, row) => {
+    if (row?.restaurant_name) {
+      acc[row.restaurant_name] = row
+    }
+    return acc
+  }, {})
+}
+
 function MenufyRestaurantCard({
   restaurant,
   categories,
+  metadata,
   expanded,
   onToggle,
   theme,
@@ -203,7 +226,17 @@ function MenufyRestaurantCard({
     0
   )
   const gallery = useMemo(() => collectRestaurantGallery(categories), [categories])
-  const { tags, previewText } = useMemo(() => buildRestaurantHighlights(categories), [categories])
+  const { tags, previewText } = useMemo(() => {
+    const fallback = buildRestaurantHighlights(categories)
+    const mongoTags = [...(metadata?.cuisine_tags || []), ...(metadata?.attribute_tags || [])]
+      .filter(Boolean)
+      .slice(0, 5)
+
+    return {
+      tags: mongoTags.length > 0 ? mongoTags : fallback.tags,
+      previewText: fallback.previewText,
+    }
+  }, [categories, metadata])
   const [activePhotoIndex, setActivePhotoIndex] = useState(0)
   const activePhoto = gallery[activePhotoIndex] || null
 
@@ -319,6 +352,7 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [origin, setOrigin] = useState(DEFAULT_MENUFY_LOCATION)
   const [expandedRestaurants, setExpandedRestaurants] = useState([])
+  const [restaurantMetadata, setRestaurantMetadata] = useState({})
 
   async function loadChunk({ append, limit }) {
     const skip = append ? loadedRestaurantCount : 0
@@ -472,6 +506,30 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
     })
     return byRestaurant
   }, [focusRestaurant, focusedRows, rows])
+  const restaurantNames = useMemo(() => Object.keys(grouped), [grouped])
+
+  useEffect(() => {
+    let ignore = false
+
+    async function loadMetadata() {
+      try {
+        const nextMetadata = await fetchRestaurantMetadata(restaurantNames)
+        if (!ignore) {
+          setRestaurantMetadata(nextMetadata)
+        }
+      } catch {
+        if (!ignore) {
+          setRestaurantMetadata({})
+        }
+      }
+    }
+
+    void loadMetadata()
+
+    return () => {
+      ignore = true
+    }
+  }, [restaurantNames])
 
   if (status === 'loading') {
     return (
@@ -523,6 +581,7 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
           <MenufyRestaurantCard
             restaurant={restaurant}
             categories={categories}
+            metadata={restaurantMetadata[restaurant]}
             expanded={expandedRestaurants.includes(restaurant)}
             onToggle={() => {
               setExpandedRestaurants(current => (
