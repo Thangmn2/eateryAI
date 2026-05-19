@@ -582,6 +582,7 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
             query: activeQuery || undefined,
           })
           if (cancelled) return
+          onVisibleRestaurantsChangeRef.current?.(restaurantsRef.current)
           syncTagOptions(restaurantsRef.current)
           setStatus('ready')
           setSearchAreaPending(false)
@@ -610,7 +611,6 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
 
         setTotalInView(candidates.length)
         setVisibleCount(visible.length)
-        onVisibleRestaurantsChangeRef.current?.(visible)
 
         if (appleAnnotationsRef.current.length > 0) {
           map.removeAnnotations(appleAnnotationsRef.current)
@@ -806,7 +806,6 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
         )
 
         setTotalInView(candidates.length)
-        onVisibleRestaurantsChangeRef.current?.(visible)
 
         if (candidates.length === 0 && filteredRestaurants.length > 0) {
           setNoNearby(true)
@@ -879,6 +878,7 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
             query: activeQuery || undefined,
           })
           if (cancelled) return
+          onVisibleRestaurantsChangeRef.current?.(restaurantsRef.current)
           syncTagOptions(restaurantsRef.current)
           setStatus('ready')
           setSearchAreaPending(false)
