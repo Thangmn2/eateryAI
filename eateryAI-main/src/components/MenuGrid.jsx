@@ -141,6 +141,46 @@ function CategorySection({ title, items, onItemClick, cart, theme }) {
   )
 }
 
+function collectRestaurantGallery(categories) {
+  return Object.values(categories)
+    .flatMap(items => items)
+    .map(item => ({
+      image: item['Image URL'] || '',
+      title: item['Item Name'] || '',
+      description: item.Description || '',
+      category: item.Category || '',
+    }))
+    .filter(entry => entry.image.startsWith('http') && !entry.image.includes('Logo.png'))
+    .filter((entry, index, array) => array.findIndex(other => other.image === entry.image) === index)
+    .slice(0, 6)
+}
+
+function buildRestaurantHighlights(categories) {
+  const categoryEntries = Object.entries(categories)
+  const tagCandidates = categoryEntries
+    .map(([category]) => category)
+    .filter(Boolean)
+    .slice(0, 4)
+
+  const firstDescribedItem = categoryEntries
+    .flatMap(([, items]) => items)
+    .find(item => typeof item.Description === 'string' && item.Description.trim().length > 0)
+
+  const fallbackNames = categoryEntries
+    .flatMap(([, items]) => items)
+    .slice(0, 3)
+    .map(item => item['Item Name'])
+    .filter(Boolean)
+
+  const previewText = firstDescribedItem?.Description?.trim()
+    || (fallbackNames.length > 0 ? `Popular picks include ${fallbackNames.join(', ')}.` : 'Browse this restaurant’s menu and top categories.')
+
+  return {
+    tags: tagCandidates,
+    previewText,
+  }
+}
+
 function RestaurantSummaryCard({
   restaurant,
   categories,
@@ -153,29 +193,101 @@ function RestaurantSummaryCard({
   const categoryEntries = Object.entries(categories)
   const itemCount = categoryEntries.reduce((sum, [, items]) => sum + items.length, 0)
   const categoryCount = categoryEntries.length
+  const gallery = useMemo(() => collectRestaurantGallery(categories), [categories])
+  const { tags, previewText } = useMemo(() => buildRestaurantHighlights(categories), [categories])
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0)
+  const activePhoto = gallery[activePhotoIndex] || null
+
+  useEffect(() => {
+    setActivePhotoIndex(0)
+  }, [restaurant])
 
   return (
     <div className={`mb-6 overflow-hidden rounded-[28px] border ${isLight ? 'border-black/10 bg-white' : 'border-white/10 bg-[#0f1115]'}`}>
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center justify-between gap-4 px-5 py-5 text-left sm:px-6"
+        className="w-full px-5 py-5 text-left sm:px-6"
       >
-        <div className="min-w-0">
-          <h2 className={`font-display text-xl font-bold sm:text-2xl ${isLight ? 'text-gray-900' : 'text-white'}`}>
-            {restaurant}
-          </h2>
-          <p className={`mt-1 text-sm ${isLight ? 'text-warmgray-dark' : 'text-white/65'}`}>
-            {itemCount} items across {categoryCount} categories
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${isLight ? 'bg-black/5 text-warmgray-dark' : 'bg-white/10 text-white/70'}`}>
-            {expanded ? 'Hide menu' : 'View menu'}
-          </span>
-          <span className={`text-lg transition-transform ${expanded ? 'rotate-180' : ''} ${isLight ? 'text-gray-900' : 'text-white'}`}>
-            ⌄
-          </span>
+        <div className="grid gap-5 md:grid-cols-[280px_minmax(0,1fr)] md:items-start">
+          <div className={`relative overflow-hidden rounded-[24px] ${isLight ? 'bg-black/5' : 'bg-white/5'}`}>
+            <div className="aspect-[4/3]">
+              {activePhoto ? (
+                <img
+                  src={activePhoto.image}
+                  alt={activePhoto.title || restaurant}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <div className={`flex h-full w-full items-center justify-center ${isLight ? 'bg-gradient-to-br from-[#f0e6d8] to-[#f7f1e8]' : 'bg-gradient-to-br from-[#16181d] to-[#0d0f13]'}`}>
+                  <span className="text-6xl">🍽</span>
+                </div>
+              )}
+            </div>
+
+            {gallery.length > 1 ? (
+              <>
+                <button
+                  type="button"
+                  onClick={event => {
+                    event.stopPropagation()
+                    setActivePhotoIndex(current => (current - 1 + gallery.length) % gallery.length)
+                  }}
+                  className="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-xl text-white backdrop-blur"
+                  aria-label={`Previous photo for ${restaurant}`}
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  onClick={event => {
+                    event.stopPropagation()
+                    setActivePhotoIndex(current => (current + 1) % gallery.length)
+                  }}
+                  className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-xl text-white backdrop-blur"
+                  aria-label={`Next photo for ${restaurant}`}
+                >
+                  ›
+                </button>
+              </>
+            ) : null}
+          </div>
+
+          <div className="flex min-w-0 items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h2 className={`font-display text-xl font-bold sm:text-2xl ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                {restaurant}
+              </h2>
+              <p className={`mt-1 text-sm ${isLight ? 'text-warmgray-dark' : 'text-white/65'}`}>
+                {itemCount} items across {categoryCount} categories
+              </p>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                {tags.map(tag => (
+                  <span
+                    key={`${restaurant}-${tag}`}
+                    className={`rounded-full border px-3 py-1 text-xs font-medium ${isLight ? 'border-black/10 bg-black/[0.03] text-warmgray-dark' : 'border-white/12 bg-white/[0.04] text-white/75'}`}
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+
+              <p className={`mt-4 max-w-2xl text-sm leading-7 ${isLight ? 'text-warmgray-dark' : 'text-white/72'}`}>
+                {previewText}
+              </p>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-3">
+              <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${isLight ? 'bg-black/5 text-warmgray-dark' : 'bg-white/10 text-white/70'}`}>
+                {expanded ? 'Hide menu' : 'View menu'}
+              </span>
+              <span className={`text-lg transition-transform ${expanded ? 'rotate-180' : ''} ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                ⌄
+              </span>
+            </div>
+          </div>
         </div>
       </button>
 

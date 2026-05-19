@@ -157,15 +157,16 @@ export default function App() {
     const restaurantSlug = slugify(name)
     const isLocalRestaurant = restaurants.includes(name)
 
+    setShowMap(false)
     setSelectedRestaurant('All')
     setFocusedHomepageRestaurant(isLocalRestaurant ? name : '')
     setFocusedMenufyRestaurant(isLocalRestaurant ? '' : name)
     requestAnimationFrame(() => {
       const target = document.getElementById('menu-content')
-      target?.scrollIntoView({ top: 0, behavior: 'smooth' })
+      target?.scrollIntoView({ top: 0, behavior: 'auto' })
       requestAnimationFrame(() => {
         document.getElementById(`restaurant-${restaurantSlug}`)?.scrollIntoView({
-          behavior: 'smooth',
+          behavior: 'auto',
           block: 'start',
         })
       })
@@ -258,7 +259,7 @@ export default function App() {
           requestAnimationFrame(() => {
             const el = document.getElementById(`restaurant-${slug}`)
             if (el) {
-              el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              el.scrollIntoView({ behavior: 'auto', block: 'start' })
             }
           })
         })
