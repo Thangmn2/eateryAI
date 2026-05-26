@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import slugify from '../utils/slugify'
 
 const INITIAL_RESTAURANT_COUNT = 10
@@ -34,7 +34,7 @@ function toCartItemShape(item, price) {
   }
 }
 
-function MenufyItemCard({ item, theme, onAdd, inCartQty }) {
+const MenufyItemCard = memo(function MenufyItemCard({ item, theme, onAdd, inCartQty }) {
   const isLight = theme === 'light'
   const price = parsePrice(item.price)
   const hasPrice = price !== null
@@ -111,9 +111,9 @@ function MenufyItemCard({ item, theme, onAdd, inCartQty }) {
       </div>
     </div>
   )
-}
+})
 
-function CategorySection({ title, description, items, theme, onAdd, cart }) {
+const CategorySection = memo(function CategorySection({ title, description, items, theme, onAdd, cartQtyMap }) {
   const isLight = theme === 'light'
 
   return (
@@ -129,11 +129,7 @@ function CategorySection({ title, description, items, theme, onAdd, cart }) {
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
         {items.map((item, i) => {
-          const cartEntry = cart.find(entry =>
-            entry.item?.Source === 'Menufy' &&
-            entry.item?.Restaurant === item.restaurant &&
-            entry.item?.['Item Name'] === item.name
-          )
+          const cartKey = `menufy::${item.restaurant || 'unknown'}::${item.name || 'untitled'}`
 
           return (
             <MenufyItemCard
@@ -141,14 +137,14 @@ function CategorySection({ title, description, items, theme, onAdd, cart }) {
               item={item}
               theme={theme}
               onAdd={onAdd}
-              inCartQty={cartEntry?.qty || 0}
+              inCartQty={cartQtyMap[cartKey] || 0}
             />
           )
         })}
       </div>
     </div>
   )
-}
+})
 
 function collectRestaurantGallery(categories) {
   return Object.values(categories)
@@ -353,6 +349,15 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
   const [origin, setOrigin] = useState(DEFAULT_MENUFY_LOCATION)
   const [expandedRestaurants, setExpandedRestaurants] = useState([])
   const [restaurantMetadata, setRestaurantMetadata] = useState({})
+  const cartQtyMap = useMemo(() => {
+    return cart.reduce((acc, entry) => {
+      const key = entry?.item?.['Cart Key']
+      if (key) {
+        acc[key] = entry.qty || 0
+      }
+      return acc
+    }, {})
+  }, [cart])
 
   async function loadChunk({ append, limit }) {
     const skip = append ? loadedRestaurantCount : 0
@@ -437,9 +442,6 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
       }
 
       try {
-        setStatus('loading')
-        setError('')
-
         const params = new URLSearchParams({
           restaurant: focusRestaurant,
           limit: '200',
@@ -464,9 +466,7 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
         }
       } catch (err) {
         if (isMounted) {
-          setFocusedRows([])
-          setError(err?.message || 'Focused Menufy restaurant request failed.')
-          setStatus('error')
+          setError(current => current || err?.message || 'Focused Menufy restaurant request failed.')
         }
       }
     }
@@ -480,7 +480,10 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
 
   useEffect(() => {
     if (focusRestaurant) {
-      setExpandedRestaurants([focusRestaurant])
+      setExpandedRestaurants(current => {
+        const next = current.filter(name => name !== focusRestaurant)
+        return [focusRestaurant, ...next]
+      })
       return
     }
 
@@ -503,7 +506,7 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
 
   const grouped = useMemo(() => {
     const byRestaurant = {}
-    const sourceRows = focusRestaurant ? focusedRows : rows
+    const sourceRows = [...focusedRows, ...rows]
 
     sourceRows.forEach(row => {
       if (!row?.restaurant || !row?.category || !Array.isArray(row.items)) return
@@ -516,8 +519,16 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
       }
     })
     return byRestaurant
-  }, [focusRestaurant, focusedRows, rows])
-  const restaurantNames = useMemo(() => Object.keys(grouped), [grouped])
+  }, [focusedRows, rows])
+  const restaurantNames = useMemo(() => {
+    const names = Object.keys(grouped)
+    if (!focusRestaurant) return names
+    return names.sort((a, b) => {
+      if (a === focusRestaurant) return -1
+      if (b === focusRestaurant) return 1
+      return a.localeCompare(b)
+    })
+  }, [focusRestaurant, grouped])
 
   useEffect(() => {
     let ignore = false
@@ -570,7 +581,7 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
     )
   }
 
-  const restaurants = Object.entries(grouped)
+  const restaurants = restaurantNames.map(name => [name, grouped[name]])
 
   if (restaurants.length === 0) {
     return null
@@ -617,7 +628,7 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
                 items={payload.items}
                 theme={theme}
                 onAdd={onAdd}
-                cart={cart}
+                cartQtyMap={cartQtyMap}
               />
             ))}
           </MenufyRestaurantCard>

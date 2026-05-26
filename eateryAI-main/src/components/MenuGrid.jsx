@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import slugify from '../utils/slugify'
 
 const RESTAURANT_BATCH_SIZE = 10
 
-function ItemCard({ item, onClick, inCart, theme }) {
+const ItemCard = memo(function ItemCard({ item, onClick, inCart, theme }) {
   const isLight = theme === 'light'
   const price = parseFloat(item['Price ($)'])
   const hasPrice = price && price > 0
@@ -110,9 +110,9 @@ function ItemCard({ item, onClick, inCart, theme }) {
       </div>
     </div>
   )
-}
+})
 
-function CategorySection({ title, items, onItemClick, cart, theme }) {
+const CategorySection = memo(function CategorySection({ title, items, onItemClick, cartQtyMap, theme }) {
   const isLight = theme === 'light'
 
   return (
@@ -123,15 +123,13 @@ function CategorySection({ title, items, onItemClick, cart, theme }) {
       </h3>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
         {items.map((item, i) => {
-          const cartEntry = cart.find(e =>
-            e.item.Restaurant === item.Restaurant && e.item['Item Name'] === item['Item Name']
-          )
+          const cartKey = item['Cart Key'] || `${item.Restaurant}::${item['Item Name']}`
           return (
             <ItemCard
               key={`${item['Item Name']}-${i}`}
               item={item}
               onClick={onItemClick}
-              inCart={cartEntry?.qty}
+              inCart={cartQtyMap[cartKey]}
               theme={theme}
             />
           )
@@ -139,7 +137,7 @@ function CategorySection({ title, items, onItemClick, cart, theme }) {
       </div>
     </div>
   )
-}
+})
 
 function collectRestaurantGallery(categories) {
   return Object.values(categories)
@@ -347,6 +345,13 @@ export default function MenuGrid({
   const [visibleRestaurantCount, setVisibleRestaurantCount] = useState(RESTAURANT_BATCH_SIZE)
   const [expandedRestaurants, setExpandedRestaurants] = useState([])
   const [restaurantMetadata, setRestaurantMetadata] = useState({})
+  const cartQtyMap = useMemo(() => {
+    return cart.reduce((acc, entry) => {
+      const key = entry?.item?.['Cart Key'] || `${entry?.item?.Restaurant}::${entry?.item?.['Item Name']}`
+      acc[key] = entry.qty || 0
+      return acc
+    }, {})
+  }, [cart])
   const restaurants = groupedItems.type === 'byRestaurant'
     ? Object.entries(groupedItems.data)
     : []
@@ -460,7 +465,7 @@ export default function MenuGrid({
                   title={category}
                   items={items}
                   onItemClick={onItemClick}
-                  cart={cart}
+                  cartQtyMap={cartQtyMap}
                   theme={theme}
                 />
               ))}
@@ -482,7 +487,7 @@ export default function MenuGrid({
           title={category}
           items={items}
           onItemClick={onItemClick}
-          cart={cart}
+          cartQtyMap={cartQtyMap}
           theme={theme}
         />
       ))}
