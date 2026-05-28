@@ -29,7 +29,7 @@ export default function ItemModal({ item, onClose, onAdd, theme }) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-[4000] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm"
       onClick={onClose}
     >
       <motion.div

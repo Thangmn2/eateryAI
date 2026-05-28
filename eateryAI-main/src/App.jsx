@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { startTransition, useCallback, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import menuJson from './data/menuData.json'
 import chipotleBuilderFallback from './data/chipotleBuilderData.json'
@@ -150,40 +150,46 @@ export default function App() {
     )
   }, [cart])
 
-  function addToCart(item, qty = 1) {
-    setCart(prev => {
-      const key = getCartKey(item)
-      const idx = prev.findIndex(entry => getCartKey(entry.item) === key)
-      if (idx >= 0) {
+  const addToCart = useCallback((item, qty = 1) => {
+    startTransition(() => {
+      setCart(prev => {
+        const key = getCartKey(item)
+        const idx = prev.findIndex(entry => getCartKey(entry.item) === key)
+        if (idx >= 0) {
+          const updated = [...prev]
+          updated[idx] = { ...updated[idx], qty: updated[idx].qty + qty }
+          return updated
+        }
+        return [...prev, { item, qty }]
+      })
+      setSelectedItem(null)
+    })
+  }, [])
+
+  const removeFromCart = useCallback((index) => {
+    startTransition(() => {
+      setCart(prev => prev.filter((_, i) => i !== index))
+    })
+  }, [])
+
+  const updateCartQty = useCallback((index, delta) => {
+    startTransition(() => {
+      setCart(prev => {
         const updated = [...prev]
-        updated[idx] = { ...updated[idx], qty: updated[idx].qty + qty }
+        const newQty = updated[index].qty + delta
+        if (newQty <= 0) return prev.filter((_, i) => i !== index)
+        updated[index] = { ...updated[index], qty: newQty }
         return updated
-      }
-      return [...prev, { item, qty }]
+      })
     })
-    setSelectedItem(null)
-  }
-
-  function removeFromCart(index) {
-    setCart(prev => prev.filter((_, i) => i !== index))
-  }
-
-  function updateCartQty(index, delta) {
-    setCart(prev => {
-      const updated = [...prev]
-      const newQty = updated[index].qty + delta
-      if (newQty <= 0) return prev.filter((_, i) => i !== index)
-      updated[index] = { ...updated[index], qty: newQty }
-      return updated
-    })
-  }
+  }, [])
 
   function refreshScannedContent() {
     setGalleryScanCount(loadScannedPhotos().length)
     setScannedMenuItems(loadScannedMenuItems())
   }
 
-  function handleRestaurantSelect(name) {
+  const handleRestaurantSelect = useCallback((name) => {
     const restaurantSlug = slugify(name)
     const isLocalRestaurant = restaurants.includes(name)
 
@@ -203,7 +209,7 @@ export default function App() {
         })
       })
     })
-  }
+  }, [restaurants])
 
   useEffect(() => {
     if (selectedRestaurant !== 'All' && !restaurants.includes(selectedRestaurant)) {
