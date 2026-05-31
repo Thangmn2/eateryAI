@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 
 function ProgressRing({ value, max, color, trackClassName, size = 38, strokeWidth = 3.5 }) {
   const radius = (size - strokeWidth) / 2
@@ -220,7 +220,7 @@ function GoalEditor({ goals, onSave, onClose, theme }) {
   ]
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/30 backdrop-blur-sm"
+    <div className="fixed inset-0 z-[4000] flex items-center justify-center bg-black/30 backdrop-blur-sm"
          onClick={onClose}>
       <div
         className={`w-80 rounded-2xl p-6 shadow-modal ${isLight ? 'bg-white' : 'border border-white/10 bg-[#111317]'}`}
@@ -271,7 +271,7 @@ function GoalEditor({ goals, onSave, onClose, theme }) {
   )
 }
 
-export default function GoalTracker({
+function GoalTracker({
   goals,
   totals,
   onGoalsChange,
@@ -391,10 +391,12 @@ export default function GoalTracker({
         <GoalEditor
           theme={theme}
           goals={goals}
-          onSave={newGoals => onGoalsChange(() => newGoals)}
+          onSave={onGoalsChange}
           onClose={() => setEditing(false)}
         />
       )}
     </>
   )
 }
+
+export default memo(GoalTracker)

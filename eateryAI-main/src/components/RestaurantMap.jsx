@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 import slugify from '../utils/slugify'
 
 const DEFAULT_CENTER = [33.7419795, -117.8231586]
@@ -479,7 +479,7 @@ function loadMapKit(token) {
   return window.__eateryMapKitPromise
 }
 
-export default function RestaurantMap({ theme, sidebar = false, onRestaurantClick, onOpenMenu, onVisibleRestaurantsChange }) {
+function RestaurantMap({ theme, sidebar = false, onRestaurantClick, onOpenMenu, onVisibleRestaurantsChange }) {
   const isLight = theme === 'light'
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
@@ -1402,3 +1402,5 @@ export default function RestaurantMap({ theme, sidebar = false, onRestaurantClic
     </section>
   )
 }
+
+export default memo(RestaurantMap)

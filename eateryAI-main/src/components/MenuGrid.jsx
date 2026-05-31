@@ -331,7 +331,7 @@ function RestaurantSummaryCard({
   )
 }
 
-export default function MenuGrid({
+function MenuGrid({
   groupedItems,
   onItemClick,
   cart,
@@ -494,3 +494,5 @@ export default function MenuGrid({
     </div>
   )
 }
+
+export default memo(MenuGrid)

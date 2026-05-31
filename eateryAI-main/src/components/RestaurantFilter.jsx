@@ -1,7 +1,7 @@
-import { useRef } from 'react'
+import { memo, useRef } from 'react'
 import slugify from '../utils/slugify'
 
-export default function RestaurantFilter({ restaurants, selected, onSelect, counts, theme }) {
+function RestaurantFilter({ restaurants, selected, onSelect, counts, theme }) {
   const scrollRef = useRef(null)
   const isLight = theme === 'light'
   const fadeClass = theme === 'light'
@@ -56,3 +56,5 @@ export default function RestaurantFilter({ restaurants, selected, onSelect, coun
     </div>
   )
 }
+
+export default memo(RestaurantFilter)

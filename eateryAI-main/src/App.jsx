@@ -149,6 +149,7 @@ export default function App() {
       { price: 0, calories: 0, protein: 0 }
     )
   }, [cart])
+  const cartCount = useMemo(() => cart.reduce((sum, entry) => sum + entry.qty, 0), [cart])
 
   const addToCart = useCallback((item, qty = 1) => {
     startTransition(() => {
@@ -183,6 +184,57 @@ export default function App() {
       })
     })
   }, [])
+
+  const handleGoalsChange = useCallback((nextGoals) => {
+    startTransition(() => {
+      setGoals(nextGoals)
+    })
+  }, [])
+
+  const handleCartOpen = useCallback(() => {
+    setShowCart(true)
+  }, [])
+
+  const handleCameraOpen = useCallback(() => {
+    setShowCamera(true)
+  }, [])
+
+  const handleGalleryOpen = useCallback(() => {
+    setShowGallery(true)
+  }, [])
+
+  const handleThemeToggle = useCallback(() => {
+    setTheme(current => current === 'light' ? 'dark' : 'light')
+  }, [])
+
+  const handleOpenMenu = useCallback(() => {
+    setShowMap(false)
+  }, [])
+
+  const handleShowMap = useCallback(() => {
+    setShowMap(true)
+  }, [])
+
+  const handleRestaurantFilterSelect = useCallback((value) => {
+    setSelectedRestaurant(value)
+    setFocusedHomepageRestaurant('')
+    setFocusedMenufyRestaurant('')
+  }, [])
+
+  const chipotleBuilderSection = useMemo(() => {
+    if (selectedRestaurant !== 'All') {
+      return null
+    }
+
+    return (
+      <ChipotleBuilder
+        data={chipotleBuilderData}
+        onAdd={addToCart}
+        isLoading={chipotleBuilderLoading}
+        theme={theme}
+      />
+    )
+  }, [addToCart, chipotleBuilderData, chipotleBuilderLoading, selectedRestaurant, theme])
 
   function refreshScannedContent() {
     setGalleryScanCount(loadScannedPhotos().length)
@@ -320,14 +372,14 @@ export default function App() {
         <GoalTracker
           goals={goals}
           totals={cartTotals}
-          onGoalsChange={setGoals}
-          cartCount={cart.reduce((s, e) => s + e.qty, 0)}
-          onCartClick={() => setShowCart(true)}
-          onOpenCamera={() => setShowCamera(true)}
-          onOpenGallery={() => setShowGallery(true)}
+          onGoalsChange={handleGoalsChange}
+          cartCount={cartCount}
+          onCartClick={handleCartOpen}
+          onOpenCamera={handleCameraOpen}
+          onOpenGallery={handleGalleryOpen}
           galleryScanCount={galleryScanCount}
           theme={theme}
-          onThemeToggle={() => setTheme(current => current === 'light' ? 'dark' : 'light')}
+          onThemeToggle={handleThemeToggle}
         />
 
         <main className={`max-w-7xl mx-auto px-4 pt-4 sm:px-6 sm:pt-5 lg:px-8 lg:pt-6 pb-24 ${isLight ? 'bg-[#f6f1e8]' : 'bg-black'}`}>
@@ -335,7 +387,7 @@ export default function App() {
             <RestaurantMap
               theme={theme}
               onRestaurantClick={handleRestaurantSelect}
-              onOpenMenu={() => setShowMap(false)}
+              onOpenMenu={handleOpenMenu}
               onVisibleRestaurantsChange={setVisibleMapRestaurants}
             />
           )}
@@ -349,7 +401,7 @@ export default function App() {
               {!showMap && (
                 <button
                   type="button"
-                  onClick={() => setShowMap(true)}
+                  onClick={handleShowMap}
                   className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                     isLight
                       ? 'bg-black text-white hover:bg-black/85'
@@ -364,11 +416,7 @@ export default function App() {
             <RestaurantFilter
               restaurants={homepageRestaurants}
               selected={selectedRestaurant}
-              onSelect={value => {
-                setSelectedRestaurant(value)
-                setFocusedHomepageRestaurant('')
-                setFocusedMenufyRestaurant('')
-              }}
+              onSelect={handleRestaurantFilterSelect}
               counts={restaurantCounts}
               theme={theme}
             />
@@ -411,14 +459,7 @@ export default function App() {
                 selectedRestaurant={selectedRestaurant}
                 focusRestaurant={focusedHomepageRestaurant}
                 afterRestaurantName={selectedRestaurant === 'All' ? 'J Sushi Orange' : undefined}
-                afterRestaurantContent={selectedRestaurant === 'All' ? (
-                  <ChipotleBuilder
-                    data={chipotleBuilderData}
-                    onAdd={addToCart}
-                    isLoading={chipotleBuilderLoading}
-                    theme={theme}
-                  />
-                ) : null}
+                afterRestaurantContent={chipotleBuilderSection}
               />
 
               {filteredUnconfirmed.length > 0 && (
