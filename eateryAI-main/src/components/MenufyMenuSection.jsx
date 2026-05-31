@@ -338,7 +338,7 @@ function MenufyRestaurantCard({
   )
 }
 
-export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart = [], allowedRestaurantNames = [] }) {
+export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart = [], allowedRestaurantNames = [], onStatsChange }) {
   const [rows, setRows] = useState([])
   const [focusedRows, setFocusedRows] = useState([])
   const [status, setStatus] = useState('loading')
@@ -582,6 +582,31 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
   }
 
   const restaurants = restaurantNames.map(name => [name, grouped[name]])
+
+  const displayedStats = useMemo(() => {
+    return restaurants.reduce(
+      (acc, [, categories]) => {
+        const itemCount = Object.values(categories).reduce(
+          (sum, payload) => sum + (Array.isArray(payload.items) ? payload.items.length : 0),
+          0
+        )
+
+        return {
+          restaurants: acc.restaurants + 1,
+          items: acc.items + itemCount,
+        }
+      },
+      { restaurants: 0, items: 0 }
+    )
+  }, [restaurants])
+
+  useEffect(() => {
+    onStatsChange?.(displayedStats)
+
+    return () => {
+      onStatsChange?.({ restaurants: 0, items: 0 })
+    }
+  }, [displayedStats, onStatsChange])
 
   if (restaurants.length === 0) {
     return null
