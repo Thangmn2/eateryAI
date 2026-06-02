@@ -37,7 +37,6 @@ export default function App() {
   const [focusedMenufyRestaurant, setFocusedMenufyRestaurant] = useState('')
   const [focusedHomepageRestaurant, setFocusedHomepageRestaurant] = useState('')
   const [visibleMapRestaurants, setVisibleMapRestaurants] = useState([])
-  const [menufyStats, setMenufyStats] = useState({ items: 0, restaurants: 0 })
   const [selectedItem, setSelectedItem] = useState(null)
   const [cart, setCart] = useState([])
   const [showCart, setShowCart] = useState(false)
@@ -151,34 +150,6 @@ export default function App() {
     )
   }, [cart])
   const cartCount = useMemo(() => cart.reduce((sum, entry) => sum + entry.qty, 0), [cart])
-  const mainMenuSummary = useMemo(() => {
-    const localItemCount = filteredConfirmed.length + filteredUnconfirmed.length
-    const localRestaurantCount = homepageRestaurants.length
-
-    if (selectedRestaurant === 'All' && hasMapScopedRestaurants) {
-      if (localItemCount > 0) {
-        return `${localItemCount} items across ${localRestaurantCount} restaurants in this map area`
-      }
-
-      if (menufyStats.restaurants > 0) {
-        return `${menufyStats.items} Menufy items across ${menufyStats.restaurants} restaurants in this map area`
-      }
-
-      return '0 items across 0 restaurants in this map area'
-    }
-
-    return `${totalItemCount} items across ${restaurants.length} restaurants`
-  }, [
-    filteredConfirmed.length,
-    filteredUnconfirmed.length,
-    hasMapScopedRestaurants,
-    homepageRestaurants.length,
-    menufyStats.items,
-    menufyStats.restaurants,
-    restaurants.length,
-    selectedRestaurant,
-    totalItemCount,
-  ])
 
   const addToCart = useCallback((item, qty = 1) => {
     startTransition(() => {
@@ -248,10 +219,6 @@ export default function App() {
     setSelectedRestaurant(value)
     setFocusedHomepageRestaurant('')
     setFocusedMenufyRestaurant('')
-  }, [])
-
-  const handleMenufyStatsChange = useCallback((nextStats) => {
-    setMenufyStats(nextStats)
   }, [])
 
   const chipotleBuilderSection = useMemo(() => {
@@ -476,11 +443,12 @@ export default function App() {
                   onAdd={addToCart}
                   cart={cart}
                   allowedRestaurantNames={selectedRestaurant === 'All' ? visibleMapRestaurantNames : []}
-                  onStatsChange={handleMenufyStatsChange}
                 />
               </LazyRender>
             <p className={`mb-6 -mt-2 text-sm ${isLight ? 'text-warmgray-dark' : 'text-white/80'}`}>
-              {mainMenuSummary}
+              {selectedRestaurant === 'All' && hasMapScopedRestaurants
+                ? `${filteredConfirmed.length + filteredUnconfirmed.length} items across ${homepageRestaurants.length} restaurants in this map area`
+                : `${totalItemCount} items across ${restaurants.length} restaurants`}
             </p>
 
               <MenuGrid
