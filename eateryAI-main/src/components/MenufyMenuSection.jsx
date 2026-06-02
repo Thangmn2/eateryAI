@@ -581,7 +581,10 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
     )
   }
 
-  const restaurants = restaurantNames.map(name => [name, grouped[name]])
+  const restaurants = useMemo(
+    () => restaurantNames.map(name => [name, grouped[name]]),
+    [grouped, restaurantNames]
+  )
 
   const displayedStats = useMemo(() => {
     return restaurants.reduce(
@@ -602,11 +605,13 @@ export default function MenufyMenuSection({ theme, focusRestaurant, onAdd, cart 
 
   useEffect(() => {
     onStatsChange?.(displayedStats)
+  }, [displayedStats, onStatsChange])
 
+  useEffect(() => {
     return () => {
       onStatsChange?.({ restaurants: 0, items: 0 })
     }
-  }, [displayedStats, onStatsChange])
+  }, [onStatsChange])
 
   if (restaurants.length === 0) {
     return null
