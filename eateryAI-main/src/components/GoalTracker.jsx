@@ -34,48 +34,6 @@ function ProgressRing({ value, max, color, trackClassName, size = 38, strokeWidt
   )
 }
 
-function ThemeSwitch({ isLight, onToggle }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={isLight}
-      aria-label={isLight ? 'Light mode enabled. Switch to dark mode.' : 'Dark mode enabled. Switch to light mode.'}
-      onClick={onToggle}
-      className={`relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border transition-all duration-200 ${
-        isLight
-          ? 'border-black/20 bg-[#ece8df] text-black hover:bg-white'
-          : 'border-white/40 bg-[#050608] text-white hover:border-white/55 hover:bg-[#0b0d11]'
-      }`}
-      title={isLight ? 'Switch to dark mode' : 'Enable light mode'}
-    >
-      <span
-        aria-hidden="true"
-        className={`absolute inset-0 rounded-[14px] ${
-          isLight
-            ? 'shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]'
-            : 'shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
-        }`}
-      />
-      <span
-        aria-hidden="true"
-        className="relative z-10 transition-transform duration-200"
-      >
-        {isLight ? (
-          <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m0 13.5V21m9-9h-2.25M5.25 12H3m14.485 6.485l-1.59-1.59M8.105 8.105l-1.59-1.59m10.97 0l-1.59 1.59M8.105 15.895l-1.59 1.59M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-        ) : (
-          <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 12.79A9 9 0 1111.21 3c0 .6.06 1.2.18 1.79A7 7 0 0021 12.79z" />
-          </svg>
-        )}
-      </span>
-      <span className="sr-only">{isLight ? 'Light mode on' : 'Dark mode on'}</span>
-    </button>
-  )
-}
-
 function EateryLogo({ isLight }) {
   return (
     <img
@@ -226,8 +184,7 @@ function GoalEditor({ goals, onSave, onClose, theme }) {
         className={`w-80 rounded-2xl p-6 shadow-modal ${isLight ? 'bg-white' : 'border border-white/10 bg-[#111317]'}`}
         onClick={e => e.stopPropagation()}
       >
-        <p className={`mb-1 font-display text-lg font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>Edit Goals</p>
-        <p className={`mb-5 text-sm ${isLight ? 'text-warmgray-dark' : 'text-white/70'}`}>Set your daily targets</p>
+        <p className={`mb-5 font-display text-lg font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>Set your daily targets</p>
         <div className="space-y-3">
           {fields.map(f => (
             <div key={f.label}>
@@ -281,9 +238,8 @@ function GoalTracker({
   onOpenGallery,
   galleryScanCount,
   theme,
-  onThemeToggle,
 }) {
-  const [editing, setEditing] = useState(false)
+  const [editing, setEditing] = useState(true)
   const isLight = theme === 'light'
 
   const metrics = [
@@ -355,7 +311,7 @@ function GoalTracker({
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              <ThemeSwitch isLight={isLight} onToggle={onThemeToggle} />
+              <div className="h-11 w-11 shrink-0" aria-hidden="true" />
               <ScanMenu
                 isLight={isLight}
                 scanCount={galleryScanCount}

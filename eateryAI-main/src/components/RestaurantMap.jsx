@@ -1,7 +1,7 @@
 import { memo, useEffect, useRef, useState } from 'react'
 import slugify from '../utils/slugify'
 
-const DEFAULT_CENTER = [33.7419795, -117.8231586]
+const DEFAULT_CENTER = [33.6461, -117.8425]
 const DEFAULT_ZOOM = 13
 const MAX_MARKERS = 25
 const SEARCH_AREA_RADIUS_MILES = 10
@@ -479,7 +479,7 @@ function loadMapKit(token) {
   return window.__eateryMapKitPromise
 }
 
-function RestaurantMap({ theme, sidebar = false, onRestaurantClick, onOpenMenu, onVisibleRestaurantsChange }) {
+function RestaurantMap({ theme, sidebar = false, onRestaurantClick, onVisibleRestaurantsChange }) {
   const isLight = theme === 'light'
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
@@ -745,6 +745,12 @@ function RestaurantMap({ theme, sidebar = false, onRestaurantClick, onOpenMenu, 
         zoomControl: true,
         scrollWheelZoom: true,
       })
+      mapRef.current = map
+      window.setTimeout(() => {
+        if (!cancelled && mapRef.current === map) {
+          map.invalidateSize()
+        }
+      }, 0)
 
       const tileConfig = isLight ? LIGHT_TILE_LAYER : DARK_TILE_LAYER
       window.L.tileLayer(tileConfig.url, {
@@ -785,11 +791,17 @@ function RestaurantMap({ theme, sidebar = false, onRestaurantClick, onOpenMenu, 
       }
 
       function updateLeafletMarkers() {
-        if (!markersLayerRef.current) return
+        if (!markersLayerRef.current || mapRef.current !== map) return
 
         markersLayerRef.current.clearLayers()
-        const bounds = map.getBounds()
-        const center = map.getCenter()
+        let bounds
+        let center
+        try {
+          bounds = map.getBounds()
+          center = map.getCenter()
+        } catch {
+          return
+        }
         const regionBounds = {
           north: bounds.getNorth(),
           south: bounds.getSouth(),
@@ -864,11 +876,18 @@ function RestaurantMap({ theme, sidebar = false, onRestaurantClick, onOpenMenu, 
 
       async function loadRestaurantsIntoLeafletMap() {
         try {
-          const mapBounds = map.getBounds()
+          let mapBounds
+          let mapCenter
+          try {
+            mapBounds = map.getBounds()
+            mapCenter = map.getCenter()
+          } catch {
+            return
+          }
           const activeQuery = searchQueryRef.current
           restaurantsRef.current = await fetchRestaurantsForViewport({
-            latitude: map.getCenter().lat,
-            longitude: map.getCenter().lng,
+            latitude: mapCenter.lat,
+            longitude: mapCenter.lng,
             bounds: {
               north: mapBounds.getNorth(),
               south: mapBounds.getSouth(),
@@ -926,10 +945,10 @@ function RestaurantMap({ theme, sidebar = false, onRestaurantClick, onOpenMenu, 
         void loadRestaurantsIntoLeafletMap()
       }
 
-      mapRef.current = map
-
       cleanup = () => {
         map.off('moveend zoomend', handleLeafletViewportChange)
+        markersLayerRef.current = null
+        userMarkerRef.current = null
         map.remove()
         mapRef.current = null
       }
@@ -1087,43 +1106,13 @@ function RestaurantMap({ theme, sidebar = false, onRestaurantClick, onOpenMenu, 
   const searchSuggestions = buildSearchSuggestions(restaurantsRef.current, searchQuery)
 
   return (
-    <section className={`relative z-0 ${sidebar ? '' : 'mx-auto w-full max-w-[1760px] px-6 pb-8 pt-10'}`}>
+    <section className={`relative z-0 ${sidebar ? '' : 'mx-auto w-full max-w-[1760px] px-0 pb-4 pt-0'}`}>
       {!sidebar && (
         <div className={`absolute left-10 bottom-12 z-[2000] flex items-center gap-3 rounded-full px-4 py-2 text-xs font-medium shadow-sm backdrop-blur ${
           isLight ? 'bg-white/85 text-gray-900' : 'bg-black/55 text-white'
         }`}>
           <div>
             Showing {visibleCount} restaurants
-          </div>
-          <div className={isLight ? 'text-gray-600' : 'text-white/75'}>
-            In view: {totalInView}
-          </div>
-        </div>
-      )}
-      {!sidebar && (
-        <div className="mb-5 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={onOpenMenu}
-              className={`rounded-full px-5 py-3 text-sm font-semibold transition ${
-                isLight
-                  ? 'bg-black text-white hover:bg-black/85'
-                  : 'bg-white text-black hover:bg-white/85'
-              }`}
-            >
-              Hide Map
-            </button>
-            <button
-              type="button"
-              className={`rounded-full px-5 py-3 text-sm font-semibold transition ${
-                isLight
-                  ? 'border border-black/10 bg-white text-black hover:bg-black/5'
-                  : 'border border-white/10 bg-[#12151b] text-white hover:bg-white/10'
-              }`}
-            >
-              All Restaurants
-            </button>
           </div>
         </div>
       )}
@@ -1179,8 +1168,8 @@ function RestaurantMap({ theme, sidebar = false, onRestaurantClick, onOpenMenu, 
               ? 'rounded-2xl border border-black/10 bg-white lg:rounded-r-none lg:border-r-0'
               : 'rounded-2xl border border-white/10 bg-[#111317] lg:rounded-r-none lg:border-r-0'
             : isLight
-              ? 'rounded-[32px] border border-black/10 bg-white'
-              : 'rounded-[32px] border border-white/10 bg-[#111317]'
+              ? 'rounded-[32px] bg-white'
+              : 'rounded-[32px] bg-[#111317]'
         }`}
       >
         <div className={`absolute left-5 top-5 z-[2100] w-[min(52rem,calc(100%-5rem))] rounded-[24px] border px-4 py-3 shadow-2xl backdrop-blur-xl ${

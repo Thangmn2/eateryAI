@@ -5,6 +5,13 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { MongoClient } from 'mongodb'
 import { loadChipotleBuilderData } from './chipotle.js'
+import {
+  getLocalDemoMenuDocuments,
+  localDocumentMatchesBounds,
+  localDocumentMatchesNames,
+  localDocumentMatchesRestaurant,
+  localDocumentMatchesSearch,
+} from '../api/_lib/localDemoData.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.resolve(__dirname, '..')
@@ -87,7 +94,7 @@ const server = http.createServer(async (req, res) => {
         },
       }).toArray()
 
-      const payload = docs
+      const mongoPayload = docs
         .map(doc => {
           const nestedCoords = Array.isArray(doc?._id?.coords) ? doc._id.coords : null
           const geoJsonCoords = Array.isArray(doc?.location?.coordinates) ? doc.location.coordinates : null
@@ -112,6 +119,14 @@ const server = http.createServer(async (req, res) => {
         })
         .filter(doc => doc.restaurant_name && Number.isFinite(doc.latitude) && Number.isFinite(doc.longitude))
         .filter(doc => isWithinBounds(doc, effectiveBounds))
+
+      const localPayload = getLocalDemoMenuDocuments()
+        .filter(doc => localDocumentMatchesSearch(doc, query))
+        .filter(doc => localDocumentMatchesBounds(doc, effectiveBounds))
+        .map(mapRestaurantDocument)
+        .filter(doc => doc.restaurant_name && Number.isFinite(doc.latitude) && Number.isFinite(doc.longitude))
+
+      const payload = [...mongoPayload, ...localPayload]
         .sort((a, b) => {
           if (hasUserLocation) {
             return distanceSq(
@@ -163,7 +178,10 @@ const server = http.createServer(async (req, res) => {
       }).toArray()
 
       return sendJson(res, 200, {
-        restaurants: docs.map(doc => {
+        restaurants: [
+          ...docs,
+          ...getLocalDemoMenuDocuments().filter(doc => localDocumentMatchesNames(doc, uniqueNames)),
+        ].map(doc => {
           const mapped = mapRestaurantDocument(doc)
           return {
             restaurant_name: mapped.restaurant_name,
@@ -176,6 +194,7 @@ const server = http.createServer(async (req, res) => {
             description: doc.restaurant_description || '',
             header_img: doc.header_img || '',
             logo_url: doc.logo_img || '',
+            address: mapped.address,
           }
         }),
       })
@@ -236,9 +255,16 @@ const server = http.createServer(async (req, res) => {
         })
         .toArray()
 
+      const localDocs = getLocalDemoMenuDocuments()
+        .filter(doc => localDocumentMatchesRestaurant(doc, restaurant))
+        .filter(doc => localDocumentMatchesNames(doc, names))
+        .filter(doc => localDocumentMatchesSearch(doc, query))
+
+      const candidateDocs = [...docs, ...localDocs]
+
       const selectedDocs = restaurant
-        ? docs
-        : docs
+        ? candidateDocs
+        : candidateDocs
           .map(doc => ({
             doc,
             restaurant: mapRestaurantDocument(doc),
@@ -273,7 +299,7 @@ const server = http.createServer(async (req, res) => {
         skip: safeSkip,
         returned: items.length,
         returnedRestaurants: selectedDocs.length,
-        hasMore: restaurant ? false : docs.length > safeSkip + safeLimit,
+        hasMore: restaurant ? false : candidateDocs.length > safeSkip + safeLimit,
       })
     }
 

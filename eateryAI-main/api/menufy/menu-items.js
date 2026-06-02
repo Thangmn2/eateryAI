@@ -1,6 +1,13 @@
 import { getMongoDb } from '../_lib/mongo.js'
 import { parseNonNegativeInt, parsePositiveInt, sendJson, withErrorHandling } from '../_lib/http.js'
 import { mapRestaurantDocument } from '../_lib/restaurants.js'
+import {
+  getLocalDemoMenuDocuments,
+  localDocumentMatchesBounds,
+  localDocumentMatchesNames,
+  localDocumentMatchesRestaurant,
+  localDocumentMatchesSearch,
+} from '../_lib/localDemoData.js'
 
 const DEFAULT_PROXIMITY_LAT_SPAN = 2
 
@@ -217,9 +224,16 @@ export default withErrorHandling(async function handler(req, res) {
     })
     .toArray()
 
+  const localDocs = getLocalDemoMenuDocuments()
+    .filter(doc => localDocumentMatchesRestaurant(doc, restaurant))
+    .filter(doc => localDocumentMatchesNames(doc, names))
+    .filter(doc => localDocumentMatchesSearch(doc, query))
+
+  const candidateDocs = [...docs, ...localDocs]
+
   const selectedDocs = restaurant
-    ? docs
-    : docs
+    ? candidateDocs
+    : candidateDocs
       .map(doc => ({
         doc,
         restaurant: mapRestaurantDocument(doc),
@@ -248,7 +262,7 @@ export default withErrorHandling(async function handler(req, res) {
       .map(entry => entry.doc)
 
   const items = selectedDocs.flatMap(mapMenuSections)
-  const hasMore = restaurant ? false : docs.length > skip + limit
+  const hasMore = restaurant ? false : candidateDocs.length > skip + limit
 
   return sendJson(res, 200, {
     items,

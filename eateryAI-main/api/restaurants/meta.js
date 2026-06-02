@@ -1,6 +1,7 @@
 import { getMongoDb } from '../_lib/mongo.js'
 import { sendJson, withErrorHandling } from '../_lib/http.js'
 import { mapRestaurantDocument } from '../_lib/restaurants.js'
+import { getLocalDemoMenuDocuments, localDocumentMatchesNames } from '../_lib/localDemoData.js'
 
 export default withErrorHandling(async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -48,7 +49,10 @@ export default withErrorHandling(async function handler(req, res) {
     })
     .toArray()
 
-  const restaurants = docs.map(doc => {
+  const restaurants = [
+    ...docs,
+    ...getLocalDemoMenuDocuments().filter(doc => localDocumentMatchesNames(doc, uniqueNames)),
+  ].map(doc => {
     const mapped = mapRestaurantDocument(doc)
     return {
       restaurant_name: mapped.restaurant_name,
@@ -61,6 +65,7 @@ export default withErrorHandling(async function handler(req, res) {
       description: doc.restaurant_description || '',
       header_img: doc.header_img || '',
       logo_url: doc.logo_img || '',
+      address: mapped.address,
     }
   })
 

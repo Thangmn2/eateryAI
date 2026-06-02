@@ -230,7 +230,7 @@ export default function CameraScanner({ knownRestaurants, onClose, onPhotoSaved,
           {mode === 'choose' && (
             <div className="space-y-3">
               <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-white/60'}`}>
-                Take a photo of a menu or upload one to scan it and add parsed items to Unconfirmed Data.
+                Take a photo of a menu or upload one to save a scanned menu.
               </p>
 
               {cameraError && (
@@ -343,7 +343,7 @@ export default function CameraScanner({ knownRestaurants, onClose, onPhotoSaved,
 
               <div className="space-y-3">
                 <p className={`text-center text-sm ${isLight ? 'text-gray-500' : 'text-white/60'}`}>
-                  Scan this menu to extract items and add them to the top of Unconfirmed Data.
+                  Scan this menu to extract and save its items.
                 </p>
 
                 {isScanning && (
@@ -407,7 +407,7 @@ export default function CameraScanner({ knownRestaurants, onClose, onPhotoSaved,
               <div>
                 <p className={`font-semibold ${isLight ? 'text-gray-800' : 'text-white'}`}>Menu scanned and saved!</p>
                 <p className={`mt-1 text-sm ${isLight ? 'text-gray-400' : 'text-white/55'}`}>
-                  Added {savedEntry?.parsedItemCount || 0} items to Unconfirmed Data
+                  Saved {savedEntry?.parsedItemCount || 0} scanned items
                   {savedEntry?.restaurantName ? ` for ${savedEntry.restaurantName}` : ''}.
                 </p>
               </div>

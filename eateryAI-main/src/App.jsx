@@ -1,11 +1,6 @@
 import { startTransition, useCallback, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
-import menuJson from './data/menuData.json'
-import chipotleBuilderFallback from './data/chipotleBuilderData.json'
 import GoalTracker from './components/GoalTracker'
-import ChipotleBuilder from './components/ChipotleBuilder'
-import RestaurantFilter from './components/RestaurantFilter'
-import MenuGrid from './components/MenuGrid'
 import ItemModal from './components/ItemModal'
 import CartPanel from './components/CartPanel'
 import CameraScanner from './components/CameraScanner'
@@ -13,30 +8,18 @@ import PhotoGallery from './components/PhotoGallery'
 import RestaurantMap from './components/RestaurantMap'
 import MenufyMenuSection from './components/MenufyMenuSection'
 import LazyRender from './components/LazyRender'
-import { loadScannedMenuItems, loadScannedPhotos } from './utils/scannedMenus'
+import { loadScannedPhotos } from './utils/scannedMenus'
 import slugify from './utils/slugify'
-
-const confirmedItems = menuJson.menuItems.filter(i => !i['Nutrition Estimated'])
-const unconfirmedItems = menuJson.menuItems.filter(i => i['Nutrition Estimated'])
 
 function getCartKey(item) {
   return item['Cart Key'] || `${item.Restaurant}::${item['Item Name']}`
 }
 
-function loadInitialTheme() {
-  if (typeof window === 'undefined') {
-    return 'dark'
-  }
-
-  return window.localStorage.getItem('eatery-theme') === 'light' ? 'light' : 'dark'
-}
-
 export default function App() {
   const [showMap, setShowMap] = useState(true)
-  const [selectedRestaurant, setSelectedRestaurant] = useState('All')
   const [focusedMenufyRestaurant, setFocusedMenufyRestaurant] = useState('')
-  const [focusedHomepageRestaurant, setFocusedHomepageRestaurant] = useState('')
   const [visibleMapRestaurants, setVisibleMapRestaurants] = useState([])
+  const [menufyStats, setMenufyStats] = useState({ items: 0, restaurants: 0 })
   const [selectedItem, setSelectedItem] = useState(null)
   const [cart, setCart] = useState([])
   const [showCart, setShowCart] = useState(false)
@@ -44,100 +27,13 @@ export default function App() {
   const [showCamera, setShowCamera] = useState(false)
   const [showGallery, setShowGallery] = useState(false)
   const [galleryScanCount, setGalleryScanCount] = useState(() => loadScannedPhotos().length)
-  const [scannedMenuItems, setScannedMenuItems] = useState(() => loadScannedMenuItems())
-  const [chipotleBuilderData, setChipotleBuilderData] = useState(chipotleBuilderFallback)
-  const [chipotleBuilderLoading, setChipotleBuilderLoading] = useState(true)
-  const [theme, setTheme] = useState(loadInitialTheme)
-  const [showBackToTop, setShowBackToTop] = useState(false)
+  const theme = 'dark'
+  const isLight = false
 
-  const isLight = theme === 'light'
-
-  const restaurants = useMemo(() => {
-    return [...new Set([...menuJson.menuItems.map(item => item.Restaurant), ...scannedMenuItems.map(item => item.Restaurant)])].sort()
-  }, [scannedMenuItems])
-  const visibleMapRestaurantSet = useMemo(
-    () => new Set(visibleMapRestaurants.map(restaurant => restaurant.restaurant_name).filter(Boolean)),
-    [visibleMapRestaurants]
-  )
-  const hasMapScopedRestaurants = visibleMapRestaurantSet.size > 0
-  const homepageRestaurants = useMemo(() => {
-    if (selectedRestaurant !== 'All' || !hasMapScopedRestaurants) {
-      return restaurants
-    }
-
-    return restaurants.filter(name => visibleMapRestaurantSet.has(name))
-  }, [hasMapScopedRestaurants, restaurants, selectedRestaurant, visibleMapRestaurantSet])
   const visibleMapRestaurantNames = useMemo(
     () => visibleMapRestaurants.map(restaurant => restaurant.restaurant_name).filter(Boolean),
     [visibleMapRestaurants]
   )
-
-  const restaurantCounts = useMemo(() => {
-    const baseCounts = [...confirmedItems, ...unconfirmedItems, ...scannedMenuItems].reduce((counts, item) => {
-      counts[item.Restaurant] = (counts[item.Restaurant] || 0) + 1
-      return counts
-    }, {})
-    if (selectedRestaurant !== 'All' || !hasMapScopedRestaurants) {
-      return baseCounts
-    }
-
-    return Object.fromEntries(
-      Object.entries(baseCounts).filter(([name]) => visibleMapRestaurantSet.has(name))
-    )
-  }, [hasMapScopedRestaurants, scannedMenuItems, selectedRestaurant, visibleMapRestaurantSet])
-
-  const filteredConfirmed = useMemo(() => {
-    return selectedRestaurant === 'All'
-      ? (hasMapScopedRestaurants
-          ? confirmedItems.filter(item => visibleMapRestaurantSet.has(item.Restaurant))
-          : confirmedItems)
-      : confirmedItems.filter(i => i.Restaurant === selectedRestaurant)
-  }, [hasMapScopedRestaurants, selectedRestaurant, visibleMapRestaurantSet])
-
-  const filteredScannedItems = useMemo(() => {
-    return selectedRestaurant === 'All'
-      ? (hasMapScopedRestaurants
-          ? scannedMenuItems.filter(item => visibleMapRestaurantSet.has(item.Restaurant))
-          : scannedMenuItems)
-      : scannedMenuItems.filter(item => item.Restaurant === selectedRestaurant)
-  }, [hasMapScopedRestaurants, scannedMenuItems, selectedRestaurant, visibleMapRestaurantSet])
-
-  const filteredUnconfirmed = useMemo(() => {
-    const baseUnconfirmed = selectedRestaurant === 'All'
-      ? (hasMapScopedRestaurants
-          ? unconfirmedItems.filter(item => visibleMapRestaurantSet.has(item.Restaurant))
-          : unconfirmedItems)
-      : unconfirmedItems.filter(i => i.Restaurant === selectedRestaurant)
-
-    return [...filteredScannedItems, ...baseUnconfirmed]
-  }, [filteredScannedItems, hasMapScopedRestaurants, selectedRestaurant, visibleMapRestaurantSet])
-
-  function groupItems(items) {
-    if (selectedRestaurant === 'All') {
-      const byRestaurant = {}
-      items.forEach(item => {
-        const r = item.Restaurant
-        if (!byRestaurant[r]) byRestaurant[r] = {}
-        const cat = item.Category || 'Other'
-        if (!byRestaurant[r][cat]) byRestaurant[r][cat] = []
-        byRestaurant[r][cat].push(item)
-      })
-      return { type: 'byRestaurant', data: byRestaurant }
-    } else {
-      const groups = {}
-      items.forEach(item => {
-        const cat = item.Category || 'Other'
-        if (!groups[cat]) groups[cat] = []
-        groups[cat].push(item)
-      })
-      return { type: 'byCategory', data: groups }
-    }
-  }
-
-  const groupedConfirmed = useMemo(() => groupItems(filteredConfirmed), [filteredConfirmed, selectedRestaurant])
-  const groupedUnconfirmed = useMemo(() => groupItems(filteredUnconfirmed), [filteredUnconfirmed, selectedRestaurant])
-  const hasScannedUnconfirmed = filteredScannedItems.length > 0
-  const totalItemCount = menuJson.menuItems.length + scannedMenuItems.length
 
   const cartTotals = useMemo(() => {
     return cart.reduce(
@@ -150,6 +46,13 @@ export default function App() {
     )
   }, [cart])
   const cartCount = useMemo(() => cart.reduce((sum, entry) => sum + entry.qty, 0), [cart])
+  const mainMenuSummary = useMemo(() => {
+    if (menufyStats.restaurants > 0) {
+      return `${menufyStats.items} items across ${menufyStats.restaurants} restaurants in this map area`
+    }
+
+    return '0 items across 0 restaurants in this map area'
+  }, [menufyStats.items, menufyStats.restaurants])
 
   const addToCart = useCallback((item, qty = 1) => {
     startTransition(() => {
@@ -164,6 +67,7 @@ export default function App() {
         return [...prev, { item, qty }]
       })
       setSelectedItem(null)
+      setShowCart(true)
     })
   }, [])
 
@@ -203,10 +107,6 @@ export default function App() {
     setShowGallery(true)
   }, [])
 
-  const handleThemeToggle = useCallback(() => {
-    setTheme(current => current === 'light' ? 'dark' : 'light')
-  }, [])
-
   const handleOpenMenu = useCallback(() => {
     setShowMap(false)
   }, [])
@@ -215,87 +115,30 @@ export default function App() {
     setShowMap(true)
   }, [])
 
-  const handleRestaurantFilterSelect = useCallback((value) => {
-    setSelectedRestaurant(value)
-    setFocusedHomepageRestaurant('')
-    setFocusedMenufyRestaurant('')
+  const handleMenufyStatsChange = useCallback((nextStats) => {
+    setMenufyStats(nextStats)
   }, [])
-
-  const chipotleBuilderSection = useMemo(() => {
-    if (selectedRestaurant !== 'All') {
-      return null
-    }
-
-    return (
-      <ChipotleBuilder
-        data={chipotleBuilderData}
-        onAdd={addToCart}
-        isLoading={chipotleBuilderLoading}
-        theme={theme}
-      />
-    )
-  }, [addToCart, chipotleBuilderData, chipotleBuilderLoading, selectedRestaurant, theme])
 
   function refreshScannedContent() {
     setGalleryScanCount(loadScannedPhotos().length)
-    setScannedMenuItems(loadScannedMenuItems())
   }
 
   const handleRestaurantSelect = useCallback((name) => {
     const restaurantSlug = slugify(name)
-    const isLocalRestaurant = restaurants.includes(name)
 
-    setSelectedRestaurant('All')
-    setFocusedHomepageRestaurant(isLocalRestaurant ? name : '')
-    setFocusedMenufyRestaurant(isLocalRestaurant ? '' : name)
+    setFocusedMenufyRestaurant(name)
     requestAnimationFrame(() => {
       const target = document.getElementById('menu-content')
       target?.scrollIntoView({ top: 0, behavior: 'smooth' })
       requestAnimationFrame(() => {
-        const homeTarget = document.getElementById(`restaurant-${restaurantSlug}`)
         const menufyTarget = document.getElementById(`menufy-restaurant-${restaurantSlug}`)
 
-        ;(homeTarget || menufyTarget)?.scrollIntoView({
+        menufyTarget?.scrollIntoView({
           behavior: 'smooth',
           block: 'start',
         })
       })
     })
-  }, [restaurants])
-
-  useEffect(() => {
-    if (selectedRestaurant !== 'All' && !restaurants.includes(selectedRestaurant)) {
-      setSelectedRestaurant('All')
-    }
-  }, [restaurants, selectedRestaurant])
-
-  useEffect(() => {
-    let ignore = false
-
-    async function loadChipotleBuilder() {
-      try {
-        const response = await fetch('/api/chipotle-builder')
-        const payload = await response.json().catch(() => ({}))
-
-        if (!response.ok || !payload?.data || ignore) {
-          return
-        }
-
-        setChipotleBuilderData(payload.data)
-      } catch {
-        // Keep the bundled fallback snapshot when the server route is unavailable.
-      } finally {
-        if (!ignore) {
-          setChipotleBuilderLoading(false)
-        }
-      }
-    }
-
-    void loadChipotleBuilder()
-
-    return () => {
-      ignore = true
-    }
   }, [])
 
   useEffect(() => {
@@ -303,23 +146,10 @@ export default function App() {
       return
     }
 
-    window.localStorage.setItem('eatery-theme', theme)
-    document.body.style.backgroundColor = isLight ? '#f6f1e8' : '#000000'
-    document.body.style.color = isLight ? '#111827' : '#ffffff'
-    document.documentElement.style.colorScheme = isLight ? 'light' : 'dark'
-  }, [isLight, theme])
-
-  useEffect(() => {
-    function handleScroll() {
-      setShowBackToTop(window.scrollY > 420)
-    }
-
-    handleScroll()
-    window.addEventListener('scroll', handleScroll, { passive: true })
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll)
-    }
+    window.localStorage.removeItem('eatery-theme')
+    document.body.style.backgroundColor = '#000000'
+    document.body.style.color = '#ffffff'
+    document.documentElement.style.colorScheme = 'dark'
   }, [])
 
   useEffect(() => {
@@ -336,24 +166,10 @@ export default function App() {
       if (!hash.startsWith('#restaurant-')) return
 
       const slug = hash.replace('#restaurant-', '')
-      const matchedRestaurant = restaurants.find(
-        name => slugify(name) === slug
-      )
+      const matchedRestaurant = visibleMapRestaurantNames.find(name => slugify(name) === slug)
+      if (!matchedRestaurant) return
 
-      if (matchedRestaurant) {
-        setSelectedRestaurant('All')
-        setFocusedHomepageRestaurant(matchedRestaurant)
-        setFocusedMenufyRestaurant('')
-
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            const el = document.getElementById(`restaurant-${slug}`)
-            if (el) {
-              el.scrollIntoView({ behavior: 'auto', block: 'start' })
-            }
-          })
-        })
-      }
+      setFocusedMenufyRestaurant(matchedRestaurant)
     }
 
     syncRestaurantFromHash()
@@ -362,12 +178,10 @@ export default function App() {
     return () => {
       window.removeEventListener('hashchange', syncRestaurantFromHash)
     }
-  }, [restaurants])
+  }, [visibleMapRestaurantNames])
 
   return (
-    <div
-      className={`grain min-h-screen ${isLight ? 'theme-light bg-[#f6f1e8]' : 'theme-dark bg-black'}`}
-    >
+    <div className="grain min-h-screen theme-dark bg-black">
       <>
         <GoalTracker
           goals={goals}
@@ -379,58 +193,26 @@ export default function App() {
           onOpenGallery={handleGalleryOpen}
           galleryScanCount={galleryScanCount}
           theme={theme}
-          onThemeToggle={handleThemeToggle}
         />
 
-        <main className={`max-w-7xl mx-auto px-4 pt-4 sm:px-6 sm:pt-5 lg:px-8 lg:pt-6 pb-24 ${isLight ? 'bg-[#f6f1e8]' : 'bg-black'}`}>
+        <main className={`max-w-7xl mx-auto px-4 pt-2 sm:px-6 sm:pt-3 lg:px-8 lg:pt-3 pb-5 ${isLight ? 'bg-[#f6f1e8]' : 'bg-black'}`}>
           {showMap && (
             <RestaurantMap
               theme={theme}
               onRestaurantClick={handleRestaurantSelect}
-              onOpenMenu={handleOpenMenu}
               onVisibleRestaurantsChange={setVisibleMapRestaurants}
             />
           )}
-
-          <div
-            className={`sticky top-[72px] z-30 -mx-4 mb-6 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 ${
-              isLight ? 'bg-[#f6f1e8]/92 border-b border-black/10' : 'bg-black border-b border-white/10'
-            }`}
-          >
-            <div className="mb-3">
-              {!showMap && (
-                <button
-                  type="button"
-                  onClick={handleShowMap}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                    isLight
-                      ? 'bg-black text-white hover:bg-black/85'
-                      : 'bg-white text-black hover:bg-white/85'
-                  }`}
-                >
-                  Show map
-                </button>
-              )}
-            </div>
-
-            <RestaurantFilter
-              restaurants={homepageRestaurants}
-              selected={selectedRestaurant}
-              onSelect={handleRestaurantFilterSelect}
-              counts={restaurantCounts}
-              theme={theme}
-            />
-          </div>
 
           <div id="menu-content" className="min-w-0">
               <LazyRender
                 rootMargin="300px"
                 minHeight="320px"
                 placeholder={(
-                  <section className="mt-12">
+                  <section className="mt-4">
                     <div className="flex items-center justify-between mb-4">
                       <h2 className={`font-display text-2xl sm:text-3xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
-                        Menufy Menu
+                        Restaurants in the Area
                       </h2>
                       <span className={`text-xs ${isLight ? 'text-warmgray' : 'text-white/60'}`}>Load on scroll</span>
                     </div>
@@ -440,64 +222,24 @@ export default function App() {
                 <MenufyMenuSection
                   theme={theme}
                   focusRestaurant={focusedMenufyRestaurant}
-                  onAdd={addToCart}
+                  onItemClick={setSelectedItem}
                   cart={cart}
-                  allowedRestaurantNames={selectedRestaurant === 'All' ? visibleMapRestaurantNames : []}
+                  allowedRestaurantNames={visibleMapRestaurantNames}
+                  onStatsChange={handleMenufyStatsChange}
+                  summaryText={mainMenuSummary}
+                  showMap={showMap}
+                  onToggleMap={showMap ? handleOpenMenu : handleShowMap}
                 />
               </LazyRender>
-            <p className={`mb-6 -mt-2 text-sm ${isLight ? 'text-warmgray-dark' : 'text-white/80'}`}>
-              {selectedRestaurant === 'All' && hasMapScopedRestaurants
-                ? `${filteredConfirmed.length + filteredUnconfirmed.length} items across ${homepageRestaurants.length} restaurants in this map area`
-                : `${totalItemCount} items across ${restaurants.length} restaurants`}
-            </p>
-
-              <MenuGrid
-                groupedItems={groupedConfirmed}
-                onItemClick={setSelectedItem}
-                cart={cart}
-                theme={theme}
-                selectedRestaurant={selectedRestaurant}
-                focusRestaurant={focusedHomepageRestaurant}
-                afterRestaurantName={selectedRestaurant === 'All' ? 'J Sushi Orange' : undefined}
-                afterRestaurantContent={chipotleBuilderSection}
-              />
-
-              {filteredUnconfirmed.length > 0 && (
-                <div className="mt-6">
-                  <div className={`flex items-center gap-3 mb-6 pt-6 border-t-2 border-dashed ${isLight ? 'border-black/10' : 'border-white/30'}`}>
-                    <div className="flex items-center gap-2">
-                      <svg className={`w-5 h-5 ${isLight ? 'text-gray-900' : 'text-white'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-                      </svg>
-                      <h3 className={`font-display text-xl sm:text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>Unconfirmed Data</h3>
-                    </div>
-                    <span className={`text-xs px-2.5 py-1 rounded-full ${isLight ? 'text-warmgray-dark bg-black/5' : 'text-white/70 bg-black/20'}`}>
-                      {filteredUnconfirmed.length} items
-                    </span>
-                  </div>
-                  <p className={`text-sm mb-5 -mt-3 ${isLight ? 'text-warmgray-dark' : 'text-white'}`}>
-                    {hasScannedUnconfirmed
-                      ? 'Recently scanned menu items appear here first. OCR can misread names, prices, and nutrition values, and older items in this section may still use estimated nutrition.'
-                      : 'Nutritional info for these items was estimated based on typical serving sizes and may not be accurate.'}
-                  </p>
-                  <div className={`flex items-center gap-3 mb-4 pb-2 border-b ${isLight ? 'border-black/10' : 'border-cream'}`}>
-                    <h2 className={`font-display text-xl sm:text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
-                      {selectedRestaurant}
-                    </h2>
-                  </div>
-                  <div className="opacity-80">
-                    <MenuGrid groupedItems={groupedUnconfirmed} onItemClick={setSelectedItem} cart={cart} theme={theme} selectedRestaurant={selectedRestaurant} />
-                  </div>
-                </div>
-              )}
           </div>
         </main>
+
       </>
 
       <AnimatePresence>
         {showCamera && (
           <CameraScanner
-            knownRestaurants={restaurants}
+            knownRestaurants={visibleMapRestaurantNames}
             onClose={() => setShowCamera(false)}
             onPhotoSaved={refreshScannedContent}
             theme={theme}
@@ -531,20 +273,6 @@ export default function App() {
           />
         )}
       </AnimatePresence>
-
-      {showBackToTop && (
-        <button
-          type="button"
-          onClick={() => window.scrollTo({ top: 0, behavior: 'auto' })}
-          className={`fixed bottom-6 right-6 z-[1100] rounded-full px-4 py-2 text-sm font-semibold shadow-lg transition ${
-            isLight
-              ? 'bg-black text-white hover:bg-black/85'
-              : 'bg-white text-black hover:bg-white/85'
-          }`}
-        >
-          Return to top
-        </button>
-      )}
     </div>
   )
 }

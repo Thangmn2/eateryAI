@@ -1,6 +1,11 @@
 import { getMongoDb } from './_lib/mongo.js'
 import { parsePositiveInt, sendJson, withErrorHandling } from './_lib/http.js'
 import { mapRestaurantDocument } from './_lib/restaurants.js'
+import {
+  getLocalDemoMenuDocuments,
+  localDocumentMatchesBounds,
+  localDocumentMatchesSearch,
+} from './_lib/localDemoData.js'
 
 const DEFAULT_PROXIMITY_LAT_SPAN = 2
 
@@ -166,10 +171,18 @@ export default withErrorHandling(async function handler(req, res) {
     },
   }).toArray()
 
-  const payload = docs
+  const mongoPayload = docs
     .map(mapRestaurantDocument)
     .filter(doc => doc.restaurant_name && Number.isFinite(doc.latitude) && Number.isFinite(doc.longitude))
     .filter(doc => isWithinBounds(doc, effectiveBounds))
+
+  const localPayload = getLocalDemoMenuDocuments()
+    .filter(doc => localDocumentMatchesSearch(doc, query))
+    .filter(doc => localDocumentMatchesBounds(doc, effectiveBounds))
+    .map(mapRestaurantDocument)
+    .filter(doc => doc.restaurant_name && Number.isFinite(doc.latitude) && Number.isFinite(doc.longitude))
+
+  const payload = [...mongoPayload, ...localPayload]
     .sort((a, b) => {
       if (hasUserLocation) {
         return distanceSq(

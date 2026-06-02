@@ -135,12 +135,12 @@ export default function CartPanel({ cart, totals, goals, onClose, onRemove, onUp
 
         {/* Footer Totals */}
         {!isEmpty && (
-          <div className={`border-t px-5 py-4 ${isLight ? 'border-cream' : 'border-white/10'}`}>
+          <div className={`border-t px-5 py-5 ${isLight ? 'border-cream bg-white' : 'border-white/10 bg-[#0d0f13]'}`}>
             {/* Summary Bars */}
-            <div className="space-y-2.5 mb-4">
+            <div className="mb-5 space-y-4">
               <SummaryRow
                 theme={theme}
-                label="Total"
+                label="Budget"
                 value={`$${totals.price.toFixed(2)}`}
                 max={goals.price}
                 current={totals.price}
@@ -184,21 +184,38 @@ export default function CartPanel({ cart, totals, goals, onClose, onRemove, onUp
 
 function SummaryRow({ label, value, max, current, color, formatMax, theme }) {
   const isLight = theme === 'light'
-  const pct = Math.min((current / max) * 100, 100)
+  const safeMax = max > 0 ? max : 1
+  const pct = Math.min((current / safeMax) * 100, 100)
   const isOver = current > max
+  const remaining = Math.max(max - current, 0)
+  const remainingText = label === 'Budget'
+    ? `$${remaining.toFixed(2)} left`
+    : label === 'Protein'
+      ? `${Math.round(remaining)}g left`
+      : `${Math.round(remaining).toLocaleString()} left`
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-1">
-        <span className={`text-xs font-medium ${isLight ? 'text-warmgray' : 'text-white/55'}`}>{label}</span>
-        <span className={`text-xs font-semibold ${isOver ? 'text-red-500' : isLight ? 'text-gray-900' : 'text-white'}`}>
-          {value}
-          <span className={`font-normal ${isLight ? 'text-warmgray-light' : 'text-white/45'}`}> / {formatMax(max)}</span>
-        </span>
+    <div className={`rounded-2xl border p-3.5 ${isLight ? 'border-black/10 bg-ivory-light' : 'border-white/10 bg-white/[0.04]'}`}>
+      <div className="mb-2.5 flex items-start justify-between gap-3">
+        <div>
+          <span className={`text-sm font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>{label}</span>
+          <p className={`mt-0.5 text-xs ${isLight ? 'text-warmgray' : 'text-white/50'}`}>
+            {isOver ? 'Over target' : remainingText}
+          </p>
+        </div>
+        <div className="text-right">
+          <span className={`block text-lg font-bold leading-none ${isOver ? 'text-red-400' : isLight ? 'text-gray-900' : 'text-white'}`}>
+            {value}
+          </span>
+          <span className={`mt-1 block text-xs ${isLight ? 'text-warmgray-light' : 'text-white/45'}`}>
+            of {formatMax(max)}
+          </span>
+        </div>
       </div>
-      <div className={`h-1.5 overflow-hidden rounded-full ${isLight ? 'bg-cream' : 'bg-white/8'}`}>
+
+      <div className={`h-3 overflow-hidden rounded-full ${isLight ? 'bg-black/10' : 'bg-black/45'}`}>
         <div
-          className={`h-full rounded-full transition-all duration-500 ${isOver ? 'bg-red-400' : color}`}
+          className={`h-full rounded-full shadow-[0_0_16px_rgba(255,255,255,0.16)] transition-all duration-500 ${isOver ? 'bg-red-400' : color}`}
           style={{ width: `${pct}%` }}
         />
       </div>
