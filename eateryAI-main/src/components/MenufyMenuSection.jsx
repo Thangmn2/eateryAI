@@ -43,7 +43,7 @@ const MenufyItemCard = memo(function MenufyItemCard({ item, theme, onItemClick, 
   const price = parsePrice(item.price)
   const hasPrice = price !== null
   const imgUrl = item.item_image || ''
-  const hasImage = typeof imgUrl === 'string' && imgUrl.startsWith('http')
+  const hasImage = typeof imgUrl === 'string' && (imgUrl.startsWith('http') || imgUrl.startsWith('/'))
   const cartItem = toCartItemShape(item, price)
 
   return (
@@ -397,7 +397,7 @@ export default function MenufyMenuSection({
       Object.values(categories).flatMap(payload => (
         (payload.items || [])
           .map(item => item?.item_image)
-          .filter(url => typeof url === 'string' && url.startsWith('http'))
+          .filter(url => typeof url === 'string' && (url.startsWith('http') || url.startsWith('/')))
       ))
     ))
 

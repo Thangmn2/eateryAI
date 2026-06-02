@@ -695,61 +695,287 @@ export const localDemoMenuDocuments = [
 
 const FOOD_IMAGE_URLS = {
   acai: 'https://images.unsplash.com/photo-1590301157890-4810ed352733?auto=format&fit=crop&w=800&q=80',
-  bagel: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80',
+  avocadoToast: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=800&q=80',
+  bagel: 'https://www.einsteinbros.com/wp-content/uploads/2023/10/EBB-Baconcheddar-Classic-Egg-Sandwich-1.jpg',
   boba: 'https://images.unsplash.com/photo-1558857563-b371033873b8?auto=format&fit=crop&w=800&q=80',
   bowl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80',
   breakfast: 'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?auto=format&fit=crop&w=800&q=80',
   burger: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80',
   burrito: 'https://images.unsplash.com/photo-1626700051175-6818013e1d4f?auto=format&fit=crop&w=800&q=80',
-  chicken: 'https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?auto=format&fit=crop&w=800&q=80',
+  breakfastBurrito: 'https://images.unsplash.com/photo-1626700051175-6818013e1d4f?auto=format&fit=crop&w=800&q=80',
+  buffaloFries: 'https://images.unsplash.com/photo-1576107232684-1279f390859f?auto=format&fit=crop&w=800&q=80',
+  chickenSandwich: 'https://www.chick-fil-a.com/wp-content/uploads/sites/2/2025/12/Chick-fil-A-Chicken-Sandwich-plp-newstalgia-patch.png?w=744',
+  chickenTenders: 'https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?auto=format&fit=crop&w=800&q=80',
   chinese: 'https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&w=800&q=80',
+  chowMein: 'https://images.unsplash.com/photo-1612929633738-8fe44f7ec841?auto=format&fit=crop&w=800&q=80',
   coffee: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=80',
+  cookie: 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=800&q=80',
+  croissant: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=800&q=80',
   dessert: 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?auto=format&fit=crop&w=800&q=80',
   dumplings: 'https://images.unsplash.com/photo-1496116218417-1a781b1c416c?auto=format&fit=crop&w=800&q=80',
+  falafel: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80',
   fries: 'https://images.unsplash.com/photo-1576107232684-1279f390859f?auto=format&fit=crop&w=800&q=80',
+  garlicKnots: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=800&q=80',
+  gyro: 'https://images.unsplash.com/photo-1600891964599-f61ba0e24092?auto=format&fit=crop&w=800&q=80',
+  hashBrown: 'https://www.einsteinbros.com/wp-content/uploads/2023/10/EBB-Twice-Baked-Hashbrown.jpg',
   iceCream: 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?auto=format&fit=crop&w=800&q=80',
+  kabob: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80',
   korean: 'https://images.unsplash.com/photo-1635363638580-c2809d049eee?auto=format&fit=crop&w=800&q=80',
   mediterranean: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80',
   noodles: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=800&q=80',
+  orangeChicken: 'https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&w=800&q=80',
+  pancakes: 'https://images.unsplash.com/photo-1528207776546-365bb710ee93?auto=format&fit=crop&w=800&q=80',
+  parfait: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=800&q=80',
   pizza: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=800&q=80',
+  poke: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80',
   salad: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80',
   sandwich: 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=800&q=80',
   smoothie: 'https://images.unsplash.com/photo-1553530666-ba11a7da3888?auto=format&fit=crop&w=800&q=80',
   sushi: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=800&q=80',
-  vegetarian: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80',
+  teriyaki: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80',
+  tteokbokki: 'https://images.unsplash.com/photo-1635363638580-c2809d049eee?auto=format&fit=crop&w=800&q=80',
+  tofu: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80',
+  vegetarian: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80',
+  wrap: 'https://images.unsplash.com/photo-1626700051175-6818013e1d4f?auto=format&fit=crop&w=800&q=80',
+  wings: 'https://images.unsplash.com/photo-1527477396000-e27163b481c2?auto=format&fit=crop&w=800&q=80',
+}
+
+const ITEM_IMAGE_OVERRIDES = {
+  'anteater burger': 'https://images.unsplash.com/photo-1565299507177-b0ac66763828?auto=format&fit=crop&w=800&q=80',
+  'loaded fries': 'https://images.unsplash.com/photo-1576107232684-1279f390859f?auto=format&fit=crop&w=800&q=80',
+  'caesar salad': 'https://images.unsplash.com/photo-1550304943-4f24f54ddde9?auto=format&fit=crop&w=800&q=80',
+
+  'bacon egg and cheese bagel': 'https://www.einsteinbros.com/wp-content/uploads/2023/10/EBB-Baconcheddar-Classic-Egg-Sandwich-1.jpg',
+  'nova lox bagel': 'https://www.einsteinbros.com/wp-content/uploads/2023/10/EBB-Novalox.jpg',
+  'avocado toast bagel': FOOD_IMAGE_URLS.avocadoToast,
+  'hash brown side': 'https://www.einsteinbros.com/wp-content/uploads/2023/10/EBB-Twice-Baked-Hashbrown.jpg',
+
+  'turkey sandwich': 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=800&q=80',
+  'chicken caesar wrap': 'https://images.unsplash.com/photo-1626700051175-6818013e1d4f?auto=format&fit=crop&w=800&q=80',
+  'greek yogurt parfait': FOOD_IMAGE_URLS.parfait,
+  'hummus snack box': 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80',
+
+  'not so fried chicken sandwich': 'https://images.unsplash.com/photo-1562967916-eb82221dfb92?auto=format&fit=crop&w=800&q=80',
+  'avocado quinoa superfood ensalada': FOOD_IMAGE_URLS.salad,
+  'turkey avo salsa verde': 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=800&q=80',
+  'thai mango salad': 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80',
+
+  'chicken kabob plate': 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80',
+  'gyro meat plate': 'https://images.unsplash.com/photo-1600891964599-f61ba0e24092?auto=format&fit=crop&w=800&q=80',
+  'falafel plate': FOOD_IMAGE_URLS.falafel,
+  'santorini bowl': 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80',
+
+  'in n out burger utc double double': '/demo-images/in-n-out/double-double.jpg',
+  'in n out burger utc cheeseburger': '/demo-images/in-n-out/cheeseburger.jpg',
+  'in n out burger utc hamburger': '/demo-images/in-n-out/hamburger.jpg',
+  'in n out burger utc french fries': '/demo-images/in-n-out/fries.jpg',
+  'double double': '/demo-images/in-n-out/double-double.jpg',
+  cheeseburger: '/demo-images/in-n-out/cheeseburger.jpg',
+  hamburger: '/demo-images/in-n-out/hamburger.jpg',
+  'french fries': '/demo-images/in-n-out/fries.jpg',
+
+  'build your own pizza': 'https://images.unsplash.com/photo-1594007654729-407eedc4be65?auto=format&fit=crop&w=800&q=80',
+  'bbq chicken pizza': 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=800&q=80',
+  'meat eater pizza': 'https://images.unsplash.com/photo-1601924582970-9238bcb495d9?auto=format&fit=crop&w=800&q=80',
+  'simple pie': 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=800&q=80',
+
+  'bulgogi beef bowl': 'https://images.unsplash.com/photo-1589302168068-964664d93dc0?auto=format&fit=crop&w=800&q=80',
+  'spicy pork bowl': 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=800&q=80',
+  'chicken gogi bowl': 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=800&q=80',
+  'kimchi fried rice': 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=800&q=80',
+
+  'beef noodle soup': 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=800&q=80',
+  'pork soup dumplings': 'https://images.unsplash.com/photo-1496116218417-1a781b1c416c?auto=format&fit=crop&w=800&q=80',
+  'dan dan noodles': 'https://images.unsplash.com/photo-1612929633738-8fe44f7ec841?auto=format&fit=crop&w=800&q=80',
+  'scallion pancake': 'https://images.unsplash.com/photo-1625398407796-82650a8c135f?auto=format&fit=crop&w=800&q=80',
+  'pork dumplings': 'https://images.unsplash.com/photo-1496116218417-1a781b1c416c?auto=format&fit=crop&w=800&q=80',
+  'chicken dumplings': 'https://images.unsplash.com/photo-1529042410759-befb1204b468?auto=format&fit=crop&w=800&q=80',
+  'dumpling bowl': 'https://images.unsplash.com/photo-1630409351217-bc4fa6422075?auto=format&fit=crop&w=800&q=80',
+  'garlic noodles': FOOD_IMAGE_URLS.noodles,
+
+  'almond milk tea': FOOD_IMAGE_URLS.boba,
+  'thai tea': 'https://images.unsplash.com/photo-1558857563-b371033873b8?auto=format&fit=crop&w=800&q=80',
+  'popcorn chicken': FOOD_IMAGE_URLS.chickenTenders,
+  'fried tofu': FOOD_IMAGE_URLS.tofu,
+
+  'chicken sandwich': 'https://www.chick-fil-a.com/wp-content/uploads/sites/2/2025/12/Chick-fil-A-Chicken-Sandwich-plp-newstalgia-patch.png?w=744',
+  'spicy chicken sandwich': 'https://www.chick-fil-a.com/wp-content/uploads/sites/2/2025/06/CFASpicySandwich_800.png?w=744',
+  'nuggets 8 count': 'https://www.chick-fil-a.com/wp-content/uploads/sites/2/2025/06/nuggets_8ct_PDP_Desk.png?w=744',
+  'waffle potato fries': 'https://www.chick-fil-a.com/wp-content/uploads/sites/2/2025/05/cfa14300winter24_medium_fries_plp_hero_d710x580_jpg_master_jpg.jpg',
+
+  'chicken burrito bowl': 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80',
+  'steak burrito': FOOD_IMAGE_URLS.burrito,
+  'sofritas bowl': FOOD_IMAGE_URLS.vegetarian,
+  'chips and guacamole': 'https://images.unsplash.com/photo-1552332386-f8dd00dc2f85?auto=format&fit=crop&w=800&q=80',
+
+  'vanilla frozen yogurt cup': FOOD_IMAGE_URLS.iceCream,
+  'chocolate frozen yogurt cup': 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?auto=format&fit=crop&w=800&q=80',
+  'tart frozen yogurt cup': 'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=800&q=80',
+
+  'pepperoni pizza slice': 'https://images.unsplash.com/photo-1601924582970-9238bcb495d9?auto=format&fit=crop&w=800&q=80',
+  'cheese pizza slice': 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=800&q=80',
+  'the works pizza': 'https://images.unsplash.com/photo-1594007654729-407eedc4be65?auto=format&fit=crop&w=800&q=80',
+  'garlic knots': 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=800&q=80',
+
+  'buffalo fries': FOOD_IMAGE_URLS.buffaloFries,
+  'traditional wings': FOOD_IMAGE_URLS.wings,
+  'boneless wings': 'https://images.unsplash.com/photo-1562967916-eb82221dfb92?auto=format&fit=crop&w=800&q=80',
+  'chicken tenders': FOOD_IMAGE_URLS.chickenTenders,
+
+  'turkey and provolone sub': 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=800&q=80',
+  'original italian sub': 'https://images.unsplash.com/photo-1559847844-5315695dadae?auto=format&fit=crop&w=800&q=80',
+  'club sub': 'https://images.unsplash.com/photo-1528736235302-52922df5c122?auto=format&fit=crop&w=800&q=80',
+  'big kahuna cheese steak': 'https://images.unsplash.com/photo-1551782450-a2132b4ba21d?auto=format&fit=crop&w=800&q=80',
+
+  'buttermilk pancakes': FOOD_IMAGE_URLS.pancakes,
+  'chicken and waffles': 'https://images.unsplash.com/photo-1608039829572-78524f79c4c7?auto=format&fit=crop&w=800&q=80',
+  'breakfast burrito': FOOD_IMAGE_URLS.breakfastBurrito,
+  'avocado toast': FOOD_IMAGE_URLS.avocadoToast,
+
+  'bento sushi uci california roll': 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=800&q=80',
+  'bento sushi uci spicy tuna roll': 'https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&fit=crop&w=800&q=80',
+  'bento sushi uci salmon avocado roll': 'https://images.unsplash.com/photo-1617196034796-73dfa7b1fd56?auto=format&fit=crop&w=800&q=80',
+  'bento sushi uci vegetable roll': 'https://images.unsplash.com/photo-1607301406259-dfb186e15de8?auto=format&fit=crop&w=800&q=80',
+  'botan sushi campus plaza california roll': 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=800&q=80',
+  'botan sushi campus plaza spicy tuna roll': 'https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&fit=crop&w=800&q=80',
+  'salmon nigiri': 'https://images.unsplash.com/photo-1617196034796-73dfa7b1fd56?auto=format&fit=crop&w=800&q=80',
+  'california roll': FOOD_IMAGE_URLS.sushi,
+  'spicy tuna roll': 'https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&fit=crop&w=800&q=80',
+  'salmon avocado roll': 'https://images.unsplash.com/photo-1617196034796-73dfa7b1fd56?auto=format&fit=crop&w=800&q=80',
+  'vegetable roll': 'https://images.unsplash.com/photo-1607301406259-dfb186e15de8?auto=format&fit=crop&w=800&q=80',
+  'chicken teriyaki bowl': FOOD_IMAGE_URLS.teriyaki,
+  'poke bowl': FOOD_IMAGE_URLS.poke,
+
+  'koobideh plate': 'https://images.unsplash.com/photo-1505253716362-afaea1d3d1af?auto=format&fit=crop&w=800&q=80',
+  'shirazi salad': FOOD_IMAGE_URLS.salad,
+  'yupdduk tteokbokki': FOOD_IMAGE_URLS.tteokbokki,
+  'rose tteokbokki': 'https://images.unsplash.com/photo-1630409351217-bc4fa6422075?auto=format&fit=crop&w=800&q=80',
+  kimbap: 'https://images.unsplash.com/photo-1617196034796-73dfa7b1fd56?auto=format&fit=crop&w=800&q=80',
+  'fried dumplings': FOOD_IMAGE_URLS.dumplings,
+
+  'saffron pistachio ice cream': FOOD_IMAGE_URLS.iceCream,
+  'rosewater ice cream': 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?auto=format&fit=crop&w=800&q=80',
+  faloodeh: FOOD_IMAGE_URLS.dessert,
+
+  'turkey breast 6 inch': 'https://images.unsplash.com/photo-1528736235302-52922df5c122?auto=format&fit=crop&w=800&q=80',
+  'italian b m t 6 inch': 'https://images.unsplash.com/photo-1559847844-5315695dadae?auto=format&fit=crop&w=800&q=80',
+  'veggie delite 6 inch': 'https://images.unsplash.com/photo-1627308595229-7830a5c91f9f?auto=format&fit=crop&w=800&q=80',
+  'tuna 6 inch': 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80',
+  'rotisserie chicken protein bowl': 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80',
+
+  'caffe latte': 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=80',
+  'iced brown sugar oatmilk shaken espresso': 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=800&q=80',
+  'cold brew': 'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?auto=format&fit=crop&w=800&q=80',
+  'spinach feta egg white wrap': 'https://images.unsplash.com/photo-1626700051175-6818013e1d4f?auto=format&fit=crop&w=800&q=80',
+  'turkey bacon cheddar sandwich': 'https://images.unsplash.com/photo-1528736235302-52922df5c122?auto=format&fit=crop&w=800&q=80',
+
+  'mango a go go': FOOD_IMAGE_URLS.smoothie,
+  'strawberries wild': 'https://images.unsplash.com/photo-1553530666-ba11a7da3888?auto=format&fit=crop&w=800&q=80',
+  razzmatazz: 'https://images.unsplash.com/photo-1505252585461-04db1eb84625?auto=format&fit=crop&w=800&q=80',
+  'acai super antioxidant': FOOD_IMAGE_URLS.acai,
+  'acai primo bowl': FOOD_IMAGE_URLS.acai,
+  'vanilla blue sky bowl': 'https://images.unsplash.com/photo-1543339308-43e59d6b73a6?auto=format&fit=crop&w=800&q=80',
+
+  'zot n go market hummus snack box': 'https://images.unsplash.com/photo-1543352634-a1c51d9f1fa7?auto=format&fit=crop&w=800&q=80',
+  'mendocino farms utc avocado quinoa superfood ensalada': 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80',
+  'mendocino farms utc thai mango salad': 'https://images.unsplash.com/photo-1543352634-a1c51d9f1fa7?auto=format&fit=crop&w=800&q=80',
+
+  'luna grill utc chicken kabob plate': 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80',
+  'luna grill utc falafel plate': 'https://images.unsplash.com/photo-1591814468924-caf88d1232e1?auto=format&fit=crop&w=800&q=80',
+  'luna grill utc santorini bowl': 'https://images.unsplash.com/photo-1543352634-a1c51d9f1fa7?auto=format&fit=crop&w=800&q=80',
+  'hen house grill campus plaza chicken kabob plate': 'https://images.unsplash.com/photo-1505253716362-afaea1d3d1af?auto=format&fit=crop&w=800&q=80',
+  'hen house grill campus plaza falafel plate': 'https://images.unsplash.com/photo-1591814468924-caf88d1232e1?auto=format&fit=crop&w=800&q=80',
+
+  'bento sushi uci chicken teriyaki bowl': 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=800&q=80',
+  'bento sushi uci poke bowl': 'https://images.unsplash.com/photo-1764306806140-f7d2cd694f00?auto=format&fit=crop&w=800&q=80',
+  'botan sushi campus plaza chicken teriyaki bowl': 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=800&q=80',
+
+  'chipotle utc chicken burrito bowl': 'https://images.unsplash.com/photo-1543339308-43e59d6b73a6?auto=format&fit=crop&w=800&q=80',
+  'chipotle utc steak burrito': 'https://images.unsplash.com/photo-1552332386-f8dd00dc2f85?auto=format&fit=crop&w=800&q=80',
+  'chipotle utc sofritas bowl': 'https://images.unsplash.com/photo-1627308595229-7830a5c91f9f?auto=format&fit=crop&w=800&q=80',
+
+  'yogurtland utc vanilla frozen yogurt cup': 'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=800&q=80',
+  'yogurtland utc chocolate frozen yogurt cup': 'https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=800&q=80',
+  'yogurtland utc tart frozen yogurt cup': 'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=800&q=80',
+  'saffron rose campus plaza saffron pistachio ice cream': 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?auto=format&fit=crop&w=800&q=80',
+  'saffron rose campus plaza rosewater ice cream': 'https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=800&q=80',
+  'saffron rose campus plaza faloodeh': 'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=800&q=80',
+
+  'orange chicken bowl': FOOD_IMAGE_URLS.orangeChicken,
+  'broccoli beef bowl': 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=800&q=80',
+  'kung pao chicken plate': 'https://images.unsplash.com/photo-1563379926898-05f4575a45d8?auto=format&fit=crop&w=800&q=80',
+  'honey walnut shrimp plate': 'https://images.unsplash.com/photo-1559737558-2f5a35f4523b?auto=format&fit=crop&w=800&q=80',
+  'fried rice': 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=800&q=80',
+  'chocolate chip cookie': FOOD_IMAGE_URLS.cookie,
+  'butter croissant': FOOD_IMAGE_URLS.croissant,
+}
+
+function normalizeImageLookup(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[’']/gu, '')
+    .replace(/[^a-z0-9]+/gu, ' ')
+    .trim()
 }
 
 function getFoodImageKey(item, category, restaurant) {
-  const text = [item?.name, item?.description, category, restaurant].filter(Boolean).join(' ').toLowerCase()
+  const text = [item?.name, item?.description, category].filter(Boolean).join(' ').toLowerCase()
 
   if (/acai|açaí/u.test(text)) return 'acai'
+  if (/avocado toast/u.test(text)) return 'avocadoToast'
+  if (/hash brown/u.test(text)) return 'hashBrown'
+  if (/bacon egg and cheese bagel|egg.*cheese.*bagel|nova lox|lox bagel/u.test(text)) return 'bagel'
+  if (/teriyaki/u.test(text)) return 'teriyaki'
+  if (/wrap/u.test(text)) return 'wrap'
+  if (/poke/u.test(text)) return 'poke'
+  if (/sushi|roll|nigiri/u.test(text)) return 'sushi'
+  if (/chicken sandwich|spicy chicken sandwich/u.test(text)) return 'chickenSandwich'
   if (/sandwich|sub|b\.m\.t|turkey|italian|tuna|jersey mike/u.test(text)) return 'sandwich'
-  if (/pizza|pepperoni|cheese slice|garlic knots/u.test(text)) return 'pizza'
-  if (/sushi|roll|nigiri|poke/u.test(text)) return 'sushi'
+  if (/garlic knots/u.test(text)) return 'garlicKnots'
+  if (/pizza|pepperoni|cheese slice/u.test(text)) return 'pizza'
   if (/burger|double-double|cheeseburger|hamburger/u.test(text)) return 'burger'
+  if (/breakfast burrito/u.test(text)) return 'breakfastBurrito'
   if (/burrito|chipotle|taco|guacamole|quesadilla/u.test(text)) return 'burrito'
-  if (/chicken sandwich|nuggets|tenders|wings|buffalo|chick-fil-a/u.test(text)) return 'chicken'
-  if (/orange chicken|kung pao|broccoli beef|honey walnut|chow mein|fried rice/u.test(text)) return 'chinese'
+  if (/protein bowl/u.test(text)) return 'bowl'
+  if (/nuggets|tenders|popcorn chicken/u.test(text)) return 'chickenTenders'
+  if (/wings|buffalo/u.test(text)) return 'wings'
+  if (/orange chicken/u.test(text)) return 'orangeChicken'
+  if (/chow mein/u.test(text)) return 'chowMein'
+  if (/kung pao|broccoli beef|honey walnut|fried rice/u.test(text)) return 'chinese'
   if (/bulgogi|kimchi|gogi|tteokbokki|kimbap|korean/u.test(text)) return 'korean'
   if (/dumpling|soup dumplings|scallion pancake/u.test(text)) return 'dumplings'
+  if (/ice cream|frozen yogurt|yogurt|faloodeh/u.test(text)) return 'iceCream'
   if (/dan dan|noodle/u.test(text)) return 'noodles'
-  if (/kabob|gyro|falafel|mediterranean|persian|koobideh|shirazi/u.test(text)) return 'mediterranean'
+  if (/kabob|koobideh/u.test(text)) return 'kabob'
+  if (/gyro/u.test(text)) return 'gyro'
+  if (/falafel/u.test(text)) return 'falafel'
+  if (/mediterranean|persian|shirazi/u.test(text)) return 'mediterranean'
+  if (/tofu/u.test(text)) return 'tofu'
+  if (/hummus|snack box/u.test(text)) return 'vegetarian'
   if (/salad|quinoa|avocado|grain bowl|veggie|vegetable/u.test(text)) return 'salad'
   if (/smoothie|jamba|mango|strawberr/u.test(text)) return 'smoothie'
   if (/coffee|latte|espresso|cold brew|starbucks/u.test(text)) return 'coffee'
   if (/milk tea|thai tea|boba|tea/u.test(text)) return 'boba'
   if (/bagel|lox/u.test(text)) return 'bagel'
-  if (/breakfast|egg|hash brown|pancake|waffle|toast/u.test(text)) return 'breakfast'
-  if (/ice cream|frozen yogurt|yogurt|faloodeh/u.test(text)) return 'iceCream'
-  if (/cookie|croissant|dessert/u.test(text)) return 'dessert'
+  if (/pancake|waffle/u.test(text)) return 'pancakes'
+  if (/parfait/u.test(text)) return 'parfait'
+  if (/breakfast|egg/u.test(text)) return 'breakfast'
+  if (/cookie/u.test(text)) return 'cookie'
+  if (/croissant/u.test(text)) return 'croissant'
+  if (/dessert/u.test(text)) return 'dessert'
   if (/fries|loaded fries/u.test(text)) return 'fries'
-  if (/tofu|hummus|snack box/u.test(text)) return 'vegetarian'
   if (/bowl|plate/u.test(text)) return 'bowl'
 
   return 'bowl'
 }
 
 function getFoodImageUrl(item, category, restaurant) {
+  const restaurantOverride = ITEM_IMAGE_OVERRIDES[normalizeImageLookup(`${restaurant || ''} ${item?.name || ''}`)]
+  if (restaurantOverride) return restaurantOverride
+
+  const override = ITEM_IMAGE_OVERRIDES[normalizeImageLookup(item?.name)]
+  if (override) return override
+
   return FOOD_IMAGE_URLS[getFoodImageKey(item, category, restaurant)] || FOOD_IMAGE_URLS.bowl
 }
 
